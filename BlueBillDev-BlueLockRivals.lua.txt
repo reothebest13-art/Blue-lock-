@@ -608,12 +608,12 @@ local function startCFrameSpeed()
 end
 
 local Window = Luna:CreateWindow({
-    Name = "The BillDev Hub (Blue Lock Rivals)",
-    Subtitle = "by Galaxy/Jah/Whohurtyoudear",
-    LogoID = "75237883871377",
+    Name = "Blue Lock Rivals",
+    Subtitle = "NoobNoob",
+    LogoID = "",
     LoadingEnabled = true,
-    LoadingTitle = "TheBillDevHub (Blue Lock Rivals)",
-    LoadingSubtitle = "by Galaxy/Jah/Whohurtyoudear",
+    LoadingTitle = "Blue Lock Rivals",
+    LoadingSubtitle = "NoobNoob",
     ConfigSettings = {
         RootFolder = "BillDevHub", 
         ConfigFolder = "Configs", 
