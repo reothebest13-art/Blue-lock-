@@ -1,27 +1,33 @@
+-- ===============================
+-- LOAD WINDUI
+-- ===============================
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
 
--- ===== COLORS (GREEN - YELLOW | MORTY STYLE) =====
-local GREEN  = Color3.fromHex("#2ECC71")
-local LIME   = Color3.fromHex("#A8FF78")
-local YELLOW = Color3.fromHex("#FFD93D")
-local WHITE  = Color3.fromHex("#FFFFFF")
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
 
-local DARK_BG1 = Color3.fromHex("#0B1E14")
-local DARK_BG2 = Color3.fromHex("#102A1B")
+-- ===============================
+-- COLORS
+-- ===============================
+local NEON_BLUE   = Color3.fromHex("#00E5FF")
+local NEON_YELLOW = Color3.fromHex("#FFF700")
+local DARK_BG1    = Color3.fromHex("#0B1220")
+local DARK_BG2    = Color3.fromHex("#020409")
+local WHITE       = Color3.fromHex("#FFFFFF")
 
--- ===== GRADIENTS =====
-local MAIN_GRADIENT = WindUI:Gradient({
-    ["0"]   = { Color = GREEN,  Transparency = 0 },
-    ["50"]  = { Color = LIME,   Transparency = 0 },
-    ["100"] = { Color = YELLOW, Transparency = 0 },
+-- ===============================
+-- GRADIENTS
+-- ===============================
+local NEON_GRADIENT = WindUI:Gradient({
+    ["0"]   = { Color = NEON_BLUE,   Transparency = 0 },
+    ["100"] = { Color = NEON_YELLOW, Transparency = 0 },
 }, { Rotation = 45 })
 
 local BACKGROUND_GRADIENT = WindUI:Gradient({
-    ["0"]   = { Color = GREEN,  Transparency = 0.35 },
-    ["50"]  = { Color = LIME,   Transparency = 0.35 },
-    ["100"] = { Color = YELLOW, Transparency = 0.35 },
+    ["0"]   = { Color = NEON_BLUE,   Transparency = 0.2 },
+    ["100"] = { Color = NEON_YELLOW, Transparency = 0.2 },
 }, { Rotation = 45 })
 
 local DARK_TAB_GRADIENT = WindUI:Gradient({
@@ -29,78 +35,72 @@ local DARK_TAB_GRADIENT = WindUI:Gradient({
     ["100"] = { Color = DARK_BG2, Transparency = 0 },
 }, { Rotation = 90 })
 
--- ===== THEME =====
+-- ===============================
+-- THEME
+-- ===============================
 WindUI:AddTheme({
-    Name = "MORTY HUBTheme",
+    Name = "Senixa Theme",
 
-    Accent = MAIN_GRADIENT,
-    Hover  = MAIN_GRADIENT,
-
+    Accent = NEON_GRADIENT,
     Background = BACKGROUND_GRADIENT,
-    BackgroundTransparency = 0.35,
+    BackgroundTransparency = 0.3,
 
-    Outline = YELLOW,
+    Outline = NEON_YELLOW,
     Text = WHITE,
-    Placeholder = Color3.fromHex("#E8FFE8"),
+    Placeholder = Color3.fromHex("#B6F7FF"),
     Icon = WHITE,
+    Hover = NEON_GRADIENT,
 
     WindowBackground = BACKGROUND_GRADIENT,
-    WindowShadow = Color3.fromRGB(0,0,0),
+    WindowShadow = Color3.fromHex("#000000"),
 
-    -- TOPBAR
     WindowTopbarButtonIcon = WHITE,
     WindowTopbarTitle = WHITE,
     WindowTopbarAuthor = WHITE,
     WindowTopbarIcon = WHITE,
 
-    -- TAB
     TabBackground = DARK_TAB_GRADIENT,
     TabTitle = WHITE,
     TabIcon = WHITE,
 
-    -- ELEMENT
     ElementBackground = DARK_TAB_GRADIENT,
     ElementTitle = WHITE,
-    ElementDesc = Color3.fromHex("#DFFFEA"),
-    ElementIcon = Color3.fromHex("#DFFFEA"),
+    ElementDesc = Color3.fromHex("#C9F6FF"),
+    ElementIcon = Color3.fromHex("#C9F6FF"),
 
-    Button = MAIN_GRADIENT,
-    Toggle = MAIN_GRADIENT,
+    Button = NEON_GRADIENT,
+    Toggle = NEON_GRADIENT,
     ToggleBar = WHITE,
-    Checkbox = MAIN_GRADIENT,
+    Checkbox = NEON_GRADIENT,
     CheckboxIcon = WHITE,
-    Slider = MAIN_GRADIENT,
+    Slider = NEON_GRADIENT,
     SliderThumb = WHITE,
-
-    -- POPUP
-    PopupBackground = BACKGROUND_GRADIENT,
-    PopupBackgroundTransparency = 0.2,
-    PopupTitle = WHITE,
-    PopupContent = WHITE,
-    PopupIcon = WHITE,
-
-    -- DIALOG
-    DialogBackground = BACKGROUND_GRADIENT,
-    DialogBackgroundTransparency = 0.2,
-    DialogTitle = WHITE,
-    DialogContent = WHITE,
-    DialogIcon = WHITE,
 })
 
--- ===== APPLY THEME =====
-WindUI:SetTheme("MORTY HUBTheme")
+WindUI:SetTheme("NeonDarkReadable")
 
--- ===== WINDOW =====
+
 local Window = WindUI:CreateWindow({
-    Title = "MORTY HUB ",
+    Title = "MORTY HUB",
     Icon = "",
-    Author = "Morty",
-    Folder = "MORTY HUB",
-    Size = UDim2.fromOffset(450, 330),
-    Theme = "MORTY HUBTheme",
+    Theme = "Senixa Theme",
     Transparent = true,
     Resizable = true,
+
+    -- ⭐ ขนาด UI
+    Size = UDim2.fromOffset(850, 400),   -- ขนาดเริ่มต้น (ใหญ่ขึ้น)
+    MinSize = Vector2.new(480, 480),     -- เล็กสุด
+    MaxSize = Vector2.new(1000, 500),    -- ใหญ่สุด
+    SideBarWidth = 180,                  -- Sidebar กว้างขึ้น
+
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Name = LP.Name,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. LP.UserId .. "&w=420&h=420",
+    },
 })
+
 
 
 -- ================= SERVICES =================
