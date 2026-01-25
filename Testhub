@@ -1,19 +1,106 @@
--- ================= UI =================
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
 ))()
 
-local Window = WindUI:CreateWindow({
-    Title="ไอ้เจหำน้อย",
-    Icon="",
-    Author="",
-    Folder="kuy",
-    Size=UDim2.fromOffset(450,330),
-    Theme="Dark",
-    Transparent=true,
-    Resizable=true,
+-- ===== COLORS (GREEN - YELLOW | MORTY STYLE) =====
+local GREEN  = Color3.fromHex("#2ECC71")
+local LIME   = Color3.fromHex("#A8FF78")
+local YELLOW = Color3.fromHex("#FFD93D")
+local WHITE  = Color3.fromHex("#FFFFFF")
+
+local DARK_BG1 = Color3.fromHex("#0B1E14")
+local DARK_BG2 = Color3.fromHex("#102A1B")
+
+-- ===== GRADIENTS =====
+local MAIN_GRADIENT = WindUI:Gradient({
+    ["0"]   = { Color = GREEN,  Transparency = 0 },
+    ["50"]  = { Color = LIME,   Transparency = 0 },
+    ["100"] = { Color = YELLOW, Transparency = 0 },
+}, { Rotation = 45 })
+
+local BACKGROUND_GRADIENT = WindUI:Gradient({
+    ["0"]   = { Color = GREEN,  Transparency = 0.35 },
+    ["50"]  = { Color = LIME,   Transparency = 0.35 },
+    ["100"] = { Color = YELLOW, Transparency = 0.35 },
+}, { Rotation = 45 })
+
+local DARK_TAB_GRADIENT = WindUI:Gradient({
+    ["0"]   = { Color = DARK_BG1, Transparency = 0 },
+    ["100"] = { Color = DARK_BG2, Transparency = 0 },
+}, { Rotation = 90 })
+
+-- ===== THEME =====
+WindUI:AddTheme({
+    Name = "MORTY HUBTheme",
+
+    Accent = MAIN_GRADIENT,
+    Hover  = MAIN_GRADIENT,
+
+    Background = BACKGROUND_GRADIENT,
+    BackgroundTransparency = 0.35,
+
+    Outline = YELLOW,
+    Text = WHITE,
+    Placeholder = Color3.fromHex("#E8FFE8"),
+    Icon = WHITE,
+
+    WindowBackground = BACKGROUND_GRADIENT,
+    WindowShadow = Color3.fromRGB(0,0,0),
+
+    -- TOPBAR
+    WindowTopbarButtonIcon = WHITE,
+    WindowTopbarTitle = WHITE,
+    WindowTopbarAuthor = WHITE,
+    WindowTopbarIcon = WHITE,
+
+    -- TAB
+    TabBackground = DARK_TAB_GRADIENT,
+    TabTitle = WHITE,
+    TabIcon = WHITE,
+
+    -- ELEMENT
+    ElementBackground = DARK_TAB_GRADIENT,
+    ElementTitle = WHITE,
+    ElementDesc = Color3.fromHex("#DFFFEA"),
+    ElementIcon = Color3.fromHex("#DFFFEA"),
+
+    Button = MAIN_GRADIENT,
+    Toggle = MAIN_GRADIENT,
+    ToggleBar = WHITE,
+    Checkbox = MAIN_GRADIENT,
+    CheckboxIcon = WHITE,
+    Slider = MAIN_GRADIENT,
+    SliderThumb = WHITE,
+
+    -- POPUP
+    PopupBackground = BACKGROUND_GRADIENT,
+    PopupBackgroundTransparency = 0.2,
+    PopupTitle = WHITE,
+    PopupContent = WHITE,
+    PopupIcon = WHITE,
+
+    -- DIALOG
+    DialogBackground = BACKGROUND_GRADIENT,
+    DialogBackgroundTransparency = 0.2,
+    DialogTitle = WHITE,
+    DialogContent = WHITE,
+    DialogIcon = WHITE,
 })
 
+-- ===== APPLY THEME =====
+WindUI:SetTheme("MORTY HUBTheme")
+
+-- ===== WINDOW =====
+local Window = WindUI:CreateWindow({
+    Title = "MORTY HUB ",
+    Icon = "",
+    Author = "Morty",
+    Folder = "MORTY HUB",
+    Size = UDim2.fromOffset(450, 330),
+    Theme = "MORTY HUBTheme",
+    Transparent = true,
+    Resizable = true,
+})
 
 
 -- ================= SERVICES =================
