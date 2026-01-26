@@ -396,3 +396,46 @@ MainTab:Toggle({
         AutoCollectEnabled = state
     end
 })
+
+local localPlayer = Players.LocalPlayer
+getgenv().SPEED_VALUE = 500
+getgenv().SPEED_ON = false
+
+task.spawn(function()
+    while true do
+        if getgenv().SPEED_ON then
+            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
+        end
+        task.wait(0.1)
+    end
+end)
+
+MainTab:Toggle({
+    Title = "walk Speed",
+    Desc = "วิ่งเร็ว",
+    Default = false,
+    Callback = function(state)
+        getgenv().SPEED_ON = state
+        if state then
+            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
+        end
+    end
+})
+
+
+MainTab:Slider({
+    Title = "Speed Value",
+    Desc = "ปรับสปีด",
+    Step = 1,
+    Value = {
+        Min = 0,
+        Max = 3000,
+        Default = 500,
+    },
+    Callback = function(value)
+        getgenv().SPEED_VALUE = value
+        if getgenv().SPEED_ON then
+            localPlayer:SetAttribute("CurrentSpeed", value)
+        end
+    end
+})
