@@ -341,3 +341,58 @@ MainTab:Toggle({
         AutoPromptEnabled = state
     end
 })
+
+-- ===== Services =====
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+
+local Net = require(ReplicatedStorage.Packages.Net)
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+-- ===== Toggle State =====
+local AutoCollectEnabled = false
+
+
+
+-- ===== Auto Collect Loop =====
+task.spawn(function()
+	while true do
+		if AutoCollectEnabled then
+			for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+				local uuid = plot.Name
+
+				-- เช็คว่า Plot เป็นของเรา
+				if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == Players.LocalPlayer then
+					local maxSlots = ClientGlobals.Plots:TryIndex({ uuid, "data", "MaxSlots" }) or 10
+
+					for slot = 1, maxSlots do
+						if not AutoCollectEnabled then break end
+
+						local args = {
+							"Collect Money",
+							uuid,
+							tostring(slot)
+						}
+
+						pcall(function()
+							PlotAction:InvokeServer(unpack(args))
+						end)
+
+						task.wait(0.05) -- กันสแปม / กันเตะ
+					end
+				end
+			end
+		end
+		task.wait(2)
+	end
+end)
+
+MainTab:Toggle({
+    Title = "Auto Collect Money",
+    Desc = "เก็บเงินที่ฐานอัตโนมัติ",
+    Default = false,
+    Callback = function(state)
+        AutoCollectEnabled = state
+    end
+})
