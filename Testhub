@@ -105,65 +105,6 @@ local Window = WindUI:CreateWindow({
     },
 })
 
-Window:EditOpenButton({ Enabled = true }) 
-
-local ScreenGui = Instance.new("ScreenGui")
-local ToggleBtn = Instance.new("ImageButton")
-local UICorner = Instance.new("UICorner") 
-
-ScreenGui.Name = "ERROR HUB"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
-
-ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
-ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-ToggleBtn.BackgroundTransparency = 0
-ToggleBtn.Image = "rbxassetid://108958018844079"
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-ToggleBtn.Parent = ScreenGui
-
-UICorner.CornerRadius = UDim.new(0, 12) 
-UICorner.Parent = ToggleBtn
-
-local opened = true
-
-local function toggle()
-    opened = not opened
-    if Window.UI then
-        Window.UI.Enabled = opened
-    else
-        Window:Toggle()
-    end
-end
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    ToggleBtn:TweenSize(
-        UDim2.new(0, 56, 0, 56),
-        Enum.EasingDirection.Out,
-        Enum.EasingStyle.Quad,
-        0.12,
-        true,
-        function()
-            ToggleBtn:TweenSize(
-                UDim2.new(0, 50, 0, 50),
-                Enum.EasingDirection.Out,
-                Enum.EasingStyle.Quad,
-                0.12,
-                true
-            )
-        end
-    )
-    toggle()
-end)
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.T then
-        toggle()
-    end
-end)
 
 
 
