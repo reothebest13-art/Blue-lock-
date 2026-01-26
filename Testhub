@@ -105,7 +105,7 @@ local Window = WindUI:CreateWindow({
     },
 })
 
-Window:EditOpenButton({ Enabled = false }) 
+Window:EditOpenButton({ Enabled = true }) 
 
 local ScreenGui = Instance.new("ScreenGui")
 local ToggleBtn = Instance.new("ImageButton")
