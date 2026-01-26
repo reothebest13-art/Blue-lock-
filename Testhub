@@ -82,12 +82,10 @@ WindUI:SetTheme("NeonDarkReadable")
 
 local Window = WindUI:CreateWindow({
     Title = "Rick HUB",
-    Icon = "",
+    Icon = "rbxassetid://108958018844079",
     Theme = "Senixa Theme",
     Transparent = true,
     Resizable = true,
-
-    -- ⭐ ขนาด UI
     Size = UDim2.fromOffset(850, 400),   -- ขนาดเริ่มต้น (ใหญ่ขึ้น)
     MinSize = Vector2.new(480, 480),     -- เล็กสุด
     MaxSize = Vector2.new(1000, 500),    -- ใหญ่สุด
@@ -100,6 +98,61 @@ local Window = WindUI:CreateWindow({
         Image = "rbxthumb://type=AvatarHeadShot&id=" .. LP.UserId .. "&w=420&h=420",
     },
 })
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleBtn = Instance.new("ImageButton")
+
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://108958018844079" 
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
+
+local opened = true
+
+local function toggle()
+    opened = not opened
+    if Window.UI then
+        Window.UI.Enabled = opened
+    else
+        Window:Toggle()
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ToggleBtn:TweenSize(
+        UDim2.new(0, 56, 0, 56),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.12,
+        true,
+        function()
+            ToggleBtn:TweenSize(
+                UDim2.new(0, 50, 0, 50),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.12,
+                true
+            )
+        end
+    )
+    toggle()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.T then
+        toggle()
+    end
+end)
+
 
 
 
