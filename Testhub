@@ -111,8 +111,8 @@ local lp = Players.LocalPlayer
 
 -- ================= CONFIG =================
 local CHECK_DISTANCE = 300
-local SPEED = 200
-local HEIGHT_RESET = 4
+local SPEED = 30
+local HEIGHT_RESET = 3
 local WAVE_SAFE_DIST = 80
 
 local Enabled = false
@@ -150,15 +150,23 @@ local function setNoclip(state)
 	end
 end
 
--- ================= WAVE =================
+-- ================= WAVE (รวม WackyWave) =================
+local function isWave(obj)
+	return obj.Name:match("^Wave%d+_Visual$")
+		or obj.Name == "WackyWave_Visual"
+end
+
 local function getNearestWave()
 	if not hrp then return nil, nil end
 
 	local nearest, dist = nil, math.huge
+
 	for _,v in ipairs(workspace:GetChildren()) do
-		if v.Name:match("^Wave%d+_Visual$") then
-			local pos = v:IsA("BasePart") and v.Position
-				or v.PrimaryPart and v.PrimaryPart.Position
+		if isWave(v) then
+			local pos =
+				v:IsA("BasePart") and v.Position
+				or (v.PrimaryPart and v.PrimaryPart.Position)
+
 			if pos then
 				local d = (hrp.Position - pos).Magnitude
 				if d < dist then
@@ -168,6 +176,7 @@ local function getNearestWave()
 			end
 		end
 	end
+
 	return nearest, dist
 end
 
@@ -179,7 +188,7 @@ local function waveBlockingGap(wavePos, gapPos)
 	return toWave.Magnitude < toGap.Magnitude and toWave.Magnitude < WAVE_SAFE_DIST
 end
 
--- ================= GAP (รวม Gap6 -> Mud) =================
+-- ================= GAP (Gap6 -> Mud) =================
 local function getBestGap()
 	if not hrp then return nil end
 
@@ -189,7 +198,7 @@ local function getBestGap()
 	for _,gap in ipairs(GapsRoot:GetChildren()) do
 		local targetPart
 
-		-- ⭐ ถ้าเป็น Gap6 ให้ใช้ Mud
+		-- ⭐ ถ้าเป็น Gap6 ใช้ Mud
 		if gap.Name == "Gap6" then
 			targetPart = gap:FindFirstChild("Mud")
 		else
@@ -273,12 +282,11 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ================= UI =================
 local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
 MainTab:Toggle({
 	Title = "Auto dodge Wave🌊",
-	Desc = "หนีคลื่นอัตโนมัติ (รองรับ Gap6 → Mud)",
+	Desc = "หนีคลื่นอัตโนมัติ",
 	Default = false,
 	Callback = function(state)
 		Enabled = state
