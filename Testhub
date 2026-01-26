@@ -166,8 +166,8 @@ end)
 
 -- ================= CONFIG =================
 local CHECK_DISTANCE = 300
-local SPEED = 30
-local HEIGHT_RESET = 3
+local SPEED = 200
+local HEIGHT_RESET = 6
 local WAVE_SAFE_DIST = 80
 
 local Enabled = false
