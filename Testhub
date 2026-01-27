@@ -195,7 +195,7 @@ end
 
 lp.CharacterAdded:Connect(setupCharacter)
 
--- ================= NOCLIP =================
+-- noclip
 local function setNoclip(state)
 	if not char then return end
 	for _,v in ipairs(char:GetDescendants()) do
@@ -205,7 +205,7 @@ local function setNoclip(state)
 	end
 end
 
--- ================= WAVE (รวม WackyWave) =================
+
 local function isWave(obj)
 	return obj.Name:match("^Wave%d+_Visual$")
 		or obj.Name == "WackyWave_Visual"
@@ -337,6 +337,125 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+-- Espทั้งหมด
+
+
+
+-- ================= COLORS =================
+local COLORS = {
+    Cosmic     = Color3.fromRGB(0,140,255), 
+    Celestial  = Color3.fromRGB(255,220,120),
+    Common     = Color3.fromRGB(200,200,200),
+    Uncommon   = Color3.fromRGB(0,255,0),
+    Rare       = Color3.fromRGB(0,170,255),
+    Epic       = Color3.fromRGB(170,0,255),
+    Legendary  = Color3.fromRGB(255,170,0),
+    Mythical   = Color3.fromRGB(255,0,0),
+    Secret     = Color3.fromRGB(0,0,0), -- ดำ
+}
+
+-- ================= STORAGE =================
+local ESPObjects = {}
+
+-- ================= CORE =================
+local function getRoot()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function createESP(obj, color)
+    if ESPObjects[obj] then return end
+    if not (obj:IsA("Model") or obj:IsA("BasePart")) then return end
+
+    local part = obj:IsA("Model")
+        and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart"))
+        or obj
+    if not part then return end
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "ESP"
+    gui.Adornee = part
+    gui.Size = UDim2.fromScale(5,2.5)
+    gui.AlwaysOnTop = true
+    gui.Enabled = false
+    gui.Parent = obj
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.fromScale(1,1)
+    txt.BackgroundTransparency = 1
+    txt.TextStrokeTransparency = 0
+    txt.TextColor3 = color
+    txt.Font = Enum.Font.GothamBold
+    txt.TextSize = 13
+    txt.Parent = gui
+
+    ESPObjects[obj] = {
+        Gui = gui,
+        Text = txt,
+        Part = part,
+        Name = obj.Name
+    }
+end
+
+-- ================= DISTANCE =================
+task.spawn(function()
+    while true do
+        local root = getRoot()
+        if root then
+            for _, d in pairs(ESPObjects) do
+                if d.Part and d.Part.Parent then
+                    local dist = (root.Position - d.Part.Position).Magnitude
+                    d.Text.Text = string.format("%s\n[ %.0f m ]", d.Name, dist)
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- ================= HELPERS =================
+local function setESPByFolder(folder, state)
+    for obj, d in pairs(ESPObjects) do
+        if obj:IsDescendantOf(folder) then
+            d.Gui.Enabled = state
+        end
+    end
+end
+
+local function scanFolder(folder, color)
+    if not folder then return end
+    for _, v in ipairs(folder:GetChildren()) do
+        createESP(v, color)
+    end
+    folder.ChildAdded:Connect(function(v)
+        task.wait()
+        createESP(v, color)
+    end)
+end
+
+-- ================= PATH =================
+local AB = workspace:WaitForChild("ActiveBrainrots")
+
+-- ================= ESP FUNCTIONS =================
+local function ESP_Cosmic()
+    scanFolder(AB.Cosmic:WaitForChild("RenderedBrainrot"), COLORS.Cosmic)
+end
+
+local function ESP_Celestial()
+    scanFolder(AB.Celestial, COLORS.Celestial)
+end
+
+local function ESP_Rarity(name)
+    local folder = AB:FindFirstChild(name)
+    if not folder then return end
+    for _, v in ipairs(folder:GetDescendants()) do
+        if v:IsA("Model") then
+            createESP(v, COLORS[name])
+        end
+    end
+end
+
+
 local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
 MainTab:Toggle({
@@ -408,8 +527,6 @@ local PlotAction = Net:RemoteFunction("Plot.PlotAction")
 -- ===== Toggle State =====
 local AutoCollectEnabled = false
 
-
-
 -- ===== Auto Collect Loop =====
 task.spawn(function()
 	while true do
@@ -442,6 +559,13 @@ task.spawn(function()
 		task.wait(2)
 	end
 end)
+
+
+
+
+
+
+
 
 MainTab:Toggle({
     Title = "Auto Collect Money",
@@ -492,5 +616,98 @@ MainTab:Slider({
         if getgenv().SPEED_ON then
             localPlayer:SetAttribute("CurrentSpeed", value)
         end
+    end
+})
+
+local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
+
+ESPTab:Toggle({
+    Title = "ESP Common",
+    Desc = "มองสมองเน่าที่อยู่โซนคอมม่อน",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Common")
+        setESPByFolder(AB.Common, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Uncommon Zone",
+    Desc = "มองสมองเน่าที่อยู่โซนอันคอมม่อน",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Uncommon")
+        setESPByFolder(AB.Uncommon, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Rare Zone",
+    Desc = "มองสมองเน่าที่อยู่โซนแร",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Rare")
+        setESPByFolder(AB.Rare, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Epic Zone",
+    Desc = "มองสมองเน่าที่อยู่โซนอีปิค",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Epic")
+        setESPByFolder(AB.Epic, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Legendary Zone",
+    Desc = "มองสมองเน่าที่อยู่โซนรีเจนดารี่",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Legendary")
+        setESPByFolder(AB.Legendary, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Mythical Zone",
+    Desc = "มองสมองเน่าที่อยู่โซนมิตติก",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Mythical")
+        setESPByFolder(AB.Mythical, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Celestial",
+    Desc = "",
+    Default = false,
+    Callback = function(state)
+        if state then ESP_Celestial() end
+        setESPByFolder(AB.Celestial, state)
+    end
+})
+
+
+ESPTab:Toggle({
+    Title = "ESP Secret Zone",
+    Desc = "มองสมองเน่สที่อยู่โซนซีเคร็ต",
+    Default = false,
+    Callback = function(state)
+        ESP_Rarity("Secret")
+        setESPByFolder(AB.Secret, state)
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Cosmic",
+    Desc = "มองสมองเน่าที่อยู่โซนคอสมิค",
+    Default = false,
+    Callback = function(state)
+        if state then ESP_Cosmic() end
+        setESPByFolder(AB.Cosmic.RenderedBrainrot, state)
     end
 })
