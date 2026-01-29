@@ -467,7 +467,37 @@ MainTab:Toggle({
 	end
 })
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local zoomConnection
+
+MainTab:Button({
+    Title = "Unlock Camera Zoom",
+    Desc = "ซูมกล้องสูงสุด 1000",
+    Callback = function()
+        -- กันกดซ้ำ
+        if zoomConnection then
+            zoomConnection:Disconnect()
+            zoomConnection = nil
+        end
+
+        zoomConnection = RunService.RenderStepped:Connect(function()
+            player.CameraMode = Enum.CameraMode.Classic
+            camera.CameraType = Enum.CameraType.Custom
+            player.CameraMinZoomDistance = 0.5
+            player.CameraMaxZoomDistance = 1000
+        end)
+
+        Window:Notify({
+            Title = "Camera Zoom✅",
+            Content = "ปลดล็อกซูม✅",
+            Duration = 3
+        })
+    end
+})
 
 local lp = Players.LocalPlayer
 
