@@ -543,15 +543,42 @@ local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
 
 local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
+local lp = Players.LocalPlayer
+local bp = lp:WaitForChild("Backpack")
 
--- ตัวแปรกลาง
-local HitboxEnabled = false
-local VisualEnabled = false
-local BoxSize = 50
+-- ====== STATE ======
+local HitLongEnabled = false
+local ShowRangeEnabled = false
+local HitRangeValue = 50
 local ORIGINAL_SIZES = {}
+local Connections = {}
 
--- ฟังก์ชัน
+-- ====== VISUAL ======
+local function createBoxVisual(parent, size)
+    local box = Instance.new("Part")
+    box.Name = "BoxVisual"
+    box.Size = size
+    box.Transparency = 0.8
+    box.Color = Color3.fromRGB(255, 100, 100)
+    box.Material = Enum.Material.Neon
+    box.CanCollide = false
+    box.Anchored = false
+    box.CastShadow = false
+
+    local wireframe = Instance.new("SelectionBox")
+    wireframe.Adornee = box
+    wireframe.Color3 = Color3.fromRGB(255, 50, 50)
+    wireframe.LineThickness = 0.05
+    wireframe.Parent = box
+
+    box.Parent = parent
+    return box
+end
+
+-- ====== APPLY HITBOX ======
 local function applyHitbox(tool)
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
@@ -560,38 +587,77 @@ local function applyHitbox(tool)
         ORIGINAL_SIZES[hitbox] = hitbox.Size
     end
 
-    if HitboxEnabled then
-        hitbox.Size = Vector3.new(BoxSize, BoxSize, BoxSize)
+    if HitLongEnabled then
+        hitbox.Size = Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
+        tool.ToolTip = ("📦 Hit Range\nSize: %d×%d×%d")
+            :format(HitRangeValue, HitRangeValue, HitRangeValue)
     else
         hitbox.Size = ORIGINAL_SIZES[hitbox]
     end
 end
 
+-- ====== APPLY VISUAL ======
 local function applyVisual(tool)
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
 
+    if Connections[tool] then
+        Connections[tool]:Disconnect()
+        Connections[tool] = nil
+    end
+
     local old = tool:FindFirstChild("BoxVisual")
     if old then old:Destroy() end
 
-    if VisualEnabled then
-        local box = createBoxVisual(tool, Vector3.new(BoxSize, BoxSize, BoxSize))
-        game:GetService("RunService").Heartbeat:Connect(function()
-            if box.Parent and hitbox.Parent then
-                box.CFrame = hitbox.CFrame
-            end
-        end)
-    end
+    if not ShowRangeEnabled then return end
+
+    local box = createBoxVisual(
+        tool,
+        Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
+    )
+
+    Connections[tool] = RunService.Heartbeat:Connect(function()
+        if box.Parent and hitbox.Parent then
+            box.CFrame = hitbox.CFrame
+        end
+    end)
 end
 
--- 🔥 CombatTab รวมทั้งหมด
+-- ====== TOOL SETUP ======
+local function setupTool(tool)
+    if not tool:IsA("Tool") then return end
+    if not tool:FindFirstChild("Hitbox") then return end
+
+    tool.Equipped:Connect(function()
+        applyHitbox(tool)
+        applyVisual(tool)
+    end)
+
+    tool.Unequipped:Connect(function()
+        local box = tool:FindFirstChild("BoxVisual")
+        if box then box:Destroy() end
+
+        if Connections[tool] then
+            Connections[tool]:Disconnect()
+            Connections[tool] = nil
+        end
+    end)
+end
+
+-- ====== INIT ======
+for _, tool in ipairs(bp:GetChildren()) do
+    setupTool(tool)
+end
+bp.ChildAdded:Connect(setupTool)
+
+-- ====== UI (TOGGLE + SLIDER) ======
 
 CombatTab:Toggle({
     Title = "Hit Long",
     Value = false,
     Callback = function(state)
-        HitboxEnabled = state
-        for _, tool in pairs(bp:GetChildren()) do
+        HitLongEnabled = state
+        for _, tool in ipairs(bp:GetChildren()) do
             applyHitbox(tool)
         end
     end
@@ -601,8 +667,8 @@ CombatTab:Toggle({
     Title = "Show hit range",
     Value = false,
     Callback = function(state)
-        VisualEnabled = state
-        for _, tool in pairs(bp:GetChildren()) do
+        ShowRangeEnabled = state
+        for _, tool in ipairs(bp:GetChildren()) do
             applyVisual(tool)
         end
     end
@@ -613,17 +679,14 @@ CombatTab:Slider({
     Value = { Min = 10, Max = 200, Default = 50 },
     Step = 1,
     Callback = function(value)
-        BoxSize = value
+        HitRangeValue = value
 
-        for _, tool in pairs(bp:GetChildren()) do
-            if HitboxEnabled then
-                local hitbox = tool:FindFirstChild("Hitbox")
-                if hitbox then
-                    hitbox.Size = Vector3.new(value, value, value)
-                end
+        for _, tool in ipairs(bp:GetChildren()) do
+            if HitLongEnabled then
+                applyHitbox(tool)
             end
 
-            if VisualEnabled then
+            if ShowRangeEnabled then
                 local box = tool:FindFirstChild("BoxVisual")
                 if box then
                     box.Size = Vector3.new(value, value, value)
@@ -632,3 +695,5 @@ CombatTab:Slider({
         end
     end
 })
+
+print("📦 Hitbox + Hit Range System Loaded")
