@@ -86,6 +86,9 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local lp = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 
 local Window = WindUI:CreateWindow({
@@ -94,10 +97,10 @@ local Window = WindUI:CreateWindow({
     Theme = "Senixa Theme",
     Transparent = true,
     Resizable = true,
-    Size = UDim2.fromOffset(850, 400),   -- ขนาดเริ่มต้น (ใหญ่ขึ้น)
-    MinSize = Vector2.new(480, 480),     -- เล็กสุด
-    MaxSize = Vector2.new(1000, 500),    -- ใหญ่สุด
-    SideBarWidth = 180,                  -- Sidebar กว้างขึ้น
+    Size = UDim2.fromOffset(850, 400), 
+    MinSize = Vector2.new(480, 480),   
+    MaxSize = Vector2.new(1000, 500),   
+    SideBarWidth = 180,               
 
     User = {
         Enabled = true,
@@ -174,12 +177,22 @@ local Enabled = false
 local tweening = false
 local arrived = false
 local currentGapPart
+local AutoCollectEnabled = false
 
+
+-- ====== STATECombat ======
+local HitLongEnabled = false
+local ShowRangeEnabled = false
+local HitRangeValue = 50
+local ORIGINAL_SIZES = {}
+local Connections = {}
 local char, hrp
+
+
 
 local GapsRoot = workspace:WaitForChild("Misc"):WaitForChild("Gaps")
 
--- ================= CHARACTER =================
+
 local function setupCharacter(character)
 	char = character
 	hrp = char:WaitForChild("HumanoidRootPart")
@@ -243,7 +256,7 @@ local function waveBlockingGap(wavePos, gapPos)
 	return toWave.Magnitude < toGap.Magnitude and toWave.Magnitude < WAVE_SAFE_DIST
 end
 
--- ================= GAP (Gap6 -> Mud) =================
+
 local function getBestGap()
 	if not hrp then return nil end
 
@@ -252,8 +265,6 @@ local function getBestGap()
 
 	for _,gap in ipairs(GapsRoot:GetChildren()) do
 		local targetPart
-
-		-- ⭐ ถ้าเป็น Gap6 ใช้ Mud
 		if gap.Name == "Gap6" then
 			targetPart = gap:FindFirstChild("Mud")
 		else
@@ -279,7 +290,7 @@ local function getBestGap()
 	return best
 end
 
--- ================= TWEEN =================
+-- tween function
 local function tweenToGap()
 	if tweening or arrived or not hrp then return end
 	tweening = true
@@ -319,7 +330,6 @@ local function tweenToGap()
 	end)
 end
 
--- ================= LOOP =================
 RunService.Heartbeat:Connect(function()
 	if not Enabled or not hrp then return end
 
@@ -365,7 +375,6 @@ MainTab:Button({
     Title = "Unlock Camera Zoom",
     Desc = "ทำให้ซูมไกล",
     Callback = function()
-        -- กันกดซ้ำ
         if zoomConnection then
             zoomConnection:Disconnect()
             zoomConnection = nil
@@ -378,8 +387,8 @@ MainTab:Button({
             player.CameraMaxZoomDistance = 1000
         end)
 
-        Window:Notify({
-            Title = "Camera Zoom✅",
+        WindUi:Notify({
+            Title = "unlockCamera Zoom✅",
             Content = "ปลดล็อกซูม✅",
             Duration = 3
         })
@@ -388,7 +397,7 @@ MainTab:Button({
 
 local lp = Players.LocalPlayer
 
--- ===== Toggle State =====
+
 local AutoPromptEnabled = false
 local lastFire = {}
 
@@ -410,8 +419,7 @@ ProximityPromptService.PromptShown:Connect(function(prompt)
 	local part = prompt.Parent
 	if not part or not part:IsA("BasePart") then return end
 
-	-- กันกดรัว / กันแล็ค
-	if lastFire[prompt] and tick() - lastFire[prompt] < 0.5 then
+	if lastFire[prompt] and tick() - lastFire[prompt] < 0.05 then
 		return
 	end
 
@@ -433,16 +441,13 @@ MainTab:Toggle({
     end
 })
 
--- ===== Services =====
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CollectionService = game:GetService("CollectionService")
+
 
 local Net = require(ReplicatedStorage.Packages.Net)
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
 local PlotAction = Net:RemoteFunction("Plot.PlotAction")
 
--- ===== Toggle State =====
-local AutoCollectEnabled = false
+
 
 -- ===== Auto Collect Loop =====
 task.spawn(function()
@@ -468,19 +473,14 @@ task.spawn(function()
 							PlotAction:InvokeServer(unpack(args))
 						end)
 
-						task.wait(0.05) -- กันสแปม / กันเตะ
+						task.wait(0.05)
 					end
 				end
 			end
 		end
-		task.wait(2)
+		task.wait(0.5)
 	end
 end)
-
-
-
-
-
 
 
 
@@ -543,18 +543,10 @@ local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
 
 local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local lp = Players.LocalPlayer
 local bp = lp:WaitForChild("Backpack")
 
--- ====== STATE ======
-local HitLongEnabled = false
-local ShowRangeEnabled = false
-local HitRangeValue = 50
-local ORIGINAL_SIZES = {}
-local Connections = {}
 
 -- ====== VISUAL ======
 local function createBoxVisual(parent, size)
@@ -697,8 +689,6 @@ CombatTab:Slider({
 })
 
 
-local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
 
 local AutoClickConnection = nil
 
