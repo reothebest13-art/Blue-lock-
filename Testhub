@@ -364,8 +364,16 @@ MainTab:Toggle({
 	end
 })
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+
+Tab:Button({
+    Title = "Tween Gap",
+    Desc = "กดแล้วจะมีหน้าต่างสคริปเสริมขึ้นมา",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/reothebest13-art/ERROR-HUB/refs/heads/main/Gaptween"))()
+    end
+})
+
+
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
