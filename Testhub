@@ -539,7 +539,10 @@ MainTab:Slider({
 local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
 
 
-
+ESPTab:Section({
+    Title = "มันบัคอยู่เดะเพิ่มให้ทีหลัง"
+})
+ 
 
 local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
 
