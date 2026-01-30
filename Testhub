@@ -650,7 +650,7 @@ for _, tool in ipairs(bp:GetChildren()) do
 end
 bp.ChildAdded:Connect(setupTool)
 
--- ====== UI (TOGGLE + SLIDER) ======
+
 
 CombatTab:Toggle({
     Title = "Hit Long",
@@ -696,4 +696,30 @@ CombatTab:Slider({
     end
 })
 
-print("📦 Hitbox + Hit Range System Loaded")
+
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+
+local AutoClickConnection = nil
+
+CombatTab:Toggle({
+    Title = "Auto Hit (Click screen)",
+    Desc = "ออโต้ตี (แบบคลิกหน้าจอ)",
+    Default = false,
+    Callback = function(state)
+        if state then
+            AutoClickConnection = RunService.RenderStepped:Connect(function()
+                pcall(function()
+                    VirtualUser:CaptureController()
+                    VirtualUser:Button1Down(Vector2.new(1280, 672))
+                    VirtualUser:Button1Up(Vector2.new(1280, 672))
+                end)
+            end)
+        else
+            if AutoClickConnection then
+                AutoClickConnection:Disconnect()
+                AutoClickConnection = nil
+            end
+        end
+    end
+})
