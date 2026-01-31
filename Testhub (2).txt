@@ -898,7 +898,7 @@ WaveTab:Toggle({
 local MoneyTab = Window:Tab({Title = "Money", Icon = "scale"})
 
 
-MoneyTab:Dropdown({
+local BrainrotDropdown = MoneyTab:Dropdown({
 	Title = "Select Brainrot for upgrade",
 	Values = getBrainrotValues(),
 	Multi = true,
