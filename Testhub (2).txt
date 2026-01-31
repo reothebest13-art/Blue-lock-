@@ -460,30 +460,7 @@ local function AntiWaveInfinite(char)
     )
 end
 
-WaveTab:Toggle({
-    Title = "There are 2-3 lives",
-    Desc = "มี2-3ชีวิต",
-    Default = false,
-    Callback = function(state)
-        AntiWaveEnabled = state
-        ClearConnections()
 
-        if state then
-            if lp.Character then
-                AntiWaveInfinite(lp.Character)
-            end
-
-            table.insert(Connections,
-                lp.CharacterAdded:Connect(function(char)
-                    task.wait(0.5)
-                    if AntiWaveEnabled then
-                        AntiWaveInfinite(char)
-                    end
-                end)
-            )
-        end
-    end
-})
 
 
 
@@ -756,7 +733,30 @@ Tab:Button({
     end
 })
 
+WaveTab:Toggle({
+    Title = "There are 2-3 lives",
+    Desc = "มี2-3ชีวิต",
+    Default = false,
+    Callback = function(state)
+        AntiWaveEnabled = state
+        ClearConnections()
 
+        if state then
+            if lp.Character then
+                AntiWaveInfinite(lp.Character)
+            end
+
+            table.insert(Connections,
+                lp.CharacterAdded:Connect(function(char)
+                    task.wait(0.5)
+                    if AntiWaveEnabled then
+                        AntiWaveInfinite(char)
+                    end
+                end)
+            )
+        end
+    end
+})
 
 
 local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
