@@ -462,54 +462,6 @@ end
 
 
 
--- ---+--------
---  upgrade 
--- ------------
-
-
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local Net = require(ReplicatedStorage.Packages.Net)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-
-local lp = Players.LocalPlayer
-
--- ===== STATE =====
-local AutoUpgrade = false
-local UpgradeAll = false
-local SelectedBrainrots = {}
-
--- ===== FIND OUR BASE + UUID =====
-local function getMyBaseAndUUID()
-	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-		local uuid = plot.Name
-		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
-			return uuid, Workspace.Bases:FindFirstChild(uuid)
-		end
-	end
-end
-
--- ===== GET BRAINROT VALUES (WITH ALL) =====
-local function getBrainrotValues()
-	local _, base = getMyBaseAndUUID()
-	if not base then return { "[ ALL ] Upgrade Everything" } end
-
-	local values = { "[ ALL ] Upgrade Everything" }
-
-	for slot = 1, 30 do
-		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
-		if slotFolder then
-			for _, obj in ipairs(slotFolder:GetChildren()) do
-				if obj.Name ~= "Root" then
-					table.insert(values, "Slot "..slot.." : "..obj.Name)
-					break
-				end
-			end
-		end
-	end
-
-	return values
-end
-
 
 
 
@@ -695,9 +647,59 @@ MainTab:Toggle({
 })
 
 
+-- ===== Services =====
+local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local Net = require(ReplicatedStorage.Packages.Net)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+local lp = Players.LocalPlayer
+
+-- ===== STATE =====
+local AutoUpgrade = false
+local UpgradeAll = false
+local SelectedBrainrots = {}
+
+-- ===== FIND OUR BASE + UUID =====
+local function getMyBaseAndUUID()
+	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+		local uuid = plot.Name
+		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
+			return uuid, Workspace.Bases:FindFirstChild(uuid)
+		end
+	end
+end
+
+-- ===== GET BRAINROT VALUES (WITH ALL) =====
+local function getBrainrotValues()
+	local _, base = getMyBaseAndUUID()
+	if not base then return { "[ ALL ] Upgrade Everything" } end
+
+	local values = { "[ ALL ] Upgrade Everything" }
+
+	for slot = 1, 30 do
+		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
+		if slotFolder then
+			for _, obj in ipairs(slotFolder:GetChildren()) do
+				if obj.Name ~= "Root" then
+					table.insert(values, "Slot "..slot.." : "..obj.Name)
+					break
+				end
+			end
+		end
+	end
+
+	return values
+end
+
+-- ===== DROPDOWN (ALL + MULTI) =====
 local BrainrotDropdown = MainTab:Dropdown({
-	Title = "Select Brainrot for Upgrade",
+	Title = "Select Brainrot",
 	Values = getBrainrotValues(),
 	Callback = function(selected)
 		if selected == "[ ALL ] Upgrade Everything" then
@@ -787,6 +789,7 @@ task.spawn(function()
 		end
 	end
 end)
+
 
 
 
