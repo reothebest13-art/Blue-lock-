@@ -487,6 +487,11 @@ local function getMyBaseAndUUID()
 	end
 end
 
+local function isBaseReady()
+	local _, base = getMyBaseAndUUID()
+	return base ~= nil
+end
+
 -- ===== GET DROPDOWN VALUES (NO ROOT) =====
 local function getBrainrotValues()
 	local _, base = getMyBaseAndUUID()
@@ -512,19 +517,6 @@ local function getBrainrotValues()
 	return values
 end
 
-
-
-local lastHash = ""
-
-RunService.Heartbeat:Connect(function()
-	local values = getBrainrotValues()
-	local hash = table.concat(values, "|")
-
-	if hash ~= lastHash then
-		lastHash = hash
-		BrainrotDropdown:Refresh(values)
-	end
-end)
 
 task.spawn(function()
 	while true do
@@ -592,6 +584,8 @@ task.spawn(function()
 		end
 	end
 end)
+
+
 
 
 
@@ -779,20 +773,51 @@ MainTab:Toggle({
 
 local BrainrotDropdown = MainTab:Dropdown({
 	Title = "Select Brainrot",
-	Values = getBrainrotValues(),
+	Values = { "Loading..." },
 	Multi = true,
 	Callback = function(selected)
 		SelectedBrainrots = selected or {}
 	end
 })
 
-
+-- ===== TOGGLE =====
 MainTab:Toggle({
 	Title = "Auto Upgrade",
 	Callback = function(state)
 		AutoUpgrade = state
 	end
 })
+
+-- ===== INITIAL REFRESH (WAIT BASE READY) =====
+task.spawn(function()
+	while task.wait(0.5) do
+		if not BrainrotDropdown then continue end
+		if not isBaseReady() then continue end
+
+		local values = getBrainrotValues()
+		if #values > 1 then
+			BrainrotDropdown:Refresh(values)
+			break
+		end
+	end
+end)
+
+-- ===== REALTIME REFRESH =====
+local lastHash = ""
+
+RunService.Heartbeat:Connect(function()
+	if not BrainrotDropdown then return end
+	if not isBaseReady() then return end
+
+	local values = getBrainrotValues()
+	local hash = table.concat(values, "|")
+
+	if hash ~= lastHash then
+		lastHash = hash
+		BrainrotDropdown:Refresh(values)
+	end
+end)
+
 
 local Net = require(ReplicatedStorage.Packages.Net)
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
