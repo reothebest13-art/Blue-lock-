@@ -89,6 +89,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 
 
 local Window = WindUI:CreateWindow({
@@ -391,15 +392,59 @@ ProximityPromptService.PromptShown:Connect(function(prompt)
 end)
 
 
+-- --------------
+-- auto upgrade 
+-- --------------
+
+
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local Net = require(ReplicatedStorage.Packages.Net)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+local lp = Players.LocalPlayer
+
+-- ===== STATE =====
+local AutoUpgrade = false
+local SelectedBrainrots = {} -- multi select
+
+-- ===== FIND OUR BASE + UUID =====
+local function getMyBaseAndUUID()
+	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+		local uuid = plot.Name
+		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
+			return uuid, Workspace.Bases:FindFirstChild(uuid)
+		end
+	end
+end
+
+-- ===== GET BRAINROT VALUES (NO ROOT) =====
+local function getBrainrotValues()
+	local _, base = getMyBaseAndUUID()
+	if not base then return { "No Base" } end
+
+	local values = {}
+
+	for slot = 1, 30 do
+		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
+		if slotFolder then
+			for _, obj in ipairs(slotFolder:GetChildren()) do
+				if obj.Name ~= "Root" then
+					table.insert(values, "Slot "..slot.." : "..obj.Name)
+				end
+			end
+		end
+	end
+
+	return (#values > 0) and values or { "No Brainrot" }
+end
+
 
 
 
 -- ======
 -- Godmode
 -- =====
--- ================= SERVICES =================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+
 
 local lp = Players.LocalPlayer
 local FAKE_HP = 100000
@@ -649,57 +694,12 @@ MainTab:Toggle({
 })
 
 
--- ===== Services =====
-local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local Net = require(ReplicatedStorage.Packages.Net)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
 
-local lp = Players.LocalPlayer
-
--- ===== STATE =====
-local AutoUpgrade = false
-local SelectedBrainrots = {} -- multi select
-
--- ===== FIND OUR BASE + UUID =====
-local function getMyBaseAndUUID()
-	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-		local uuid = plot.Name
-		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
-			return uuid, Workspace.Bases:FindFirstChild(uuid)
-		end
-	end
-end
-
--- ===== GET BRAINROT VALUES (NO ROOT) =====
-local function getBrainrotValues()
-	local _, base = getMyBaseAndUUID()
-	if not base then return { "No Base" } end
-
-	local values = {}
-
-	for slot = 1, 30 do
-		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
-		if slotFolder then
-			for _, obj in ipairs(slotFolder:GetChildren()) do
-				if obj.Name ~= "Root" then
-					table.insert(values, "Slot "..slot.." : "..obj.Name)
-				end
-			end
-		end
-	end
-
-	return (#values > 0) and values or { "No Brainrot" }
-end
 
 -- ===== DROPDOWN (MULTI SELECT) =====
 local BrainrotDropdown = MainTab:Dropdown({
-	Title = "Select Brainrot",
+	Title = "Select Brainrot for Auto upgrade",
 	Values = getBrainrotValues(),
 	Multi = true,
 	Callback = function(selected)
@@ -707,16 +707,15 @@ local BrainrotDropdown = MainTab:Dropdown({
 	end
 })
 
--- ===== TOGGLE AUTO UPGRADE =====
 MainTab:Toggle({
 	Title = "Auto Upgrade",
+    Desc = "ออโต้อัพเกรดสมองเน่าส",
 	Default = false,
 	Callback = function(state)
 		AutoUpgrade = state
 	end
 })
 
--- ===== REAL-TIME DROPDOWN UPDATE =====
 local lastHash = ""
 
 RunService.Heartbeat:Connect(function()
@@ -728,8 +727,6 @@ RunService.Heartbeat:Connect(function()
 		BrainrotDropdown:Refresh(values)
 	end
 end)
-
--- ===== AUTO UPGRADE LOOP (MULTI) =====
 task.spawn(function()
 	while task.wait(2) do
 		if not AutoUpgrade then continue end
