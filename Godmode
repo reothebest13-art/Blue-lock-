@@ -1,0 +1,103 @@
+-- ================= SERVICES =================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local lp = Players.LocalPlayer
+local FAKE_HP = 100000
+local MAX_LIVES = 2
+local lives = MAX_LIVES
+local godEnabled = true
+
+-- ================= UI =================
+local gui = Instance.new("ScreenGui")
+gui.Name = "HeartUI"
+gui.ResetOnSpawn = false
+gui.Parent = lp:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 120, 0, 40)
+frame.Position = UDim2.new(0, 20, 0, 20)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BackgroundTransparency = 0.2
+frame.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,12)
+corner.Parent = frame
+
+local hearts = {}
+
+for i = 1, MAX_LIVES do
+    local heart = Instance.new("TextLabel")
+    heart.Size = UDim2.new(0, 40, 0, 40)
+    heart.Position = UDim2.new(0, (i-1)*45, 0, 0)
+    heart.BackgroundTransparency = 1
+    heart.Text = "❤️"
+    heart.TextScaled = true
+    heart.Parent = frame
+    hearts[i] = heart
+end
+
+local function updateHearts()
+    for i = 1, MAX_LIVES do
+        hearts[i].TextTransparency = (i > lives) and 0.7 or 0
+    end
+end
+
+updateHearts()
+
+-- ================= GODMODE =================
+local function GodMode(char)
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    hum.BreakJointsOnDeath = false
+    hum.MaxHealth = math.huge
+    hum.Health = FAKE_HP
+
+    hum.WalkSpeed = 16
+    hum.JumpPower = 50
+    hum.UseJumpPower = true
+
+    local deadLock = false
+
+    hum:GetPropertyChangedSignal("Health"):Connect(function()
+        if not godEnabled then return end
+
+        if hum.Health <= 0 and not deadLock then
+            deadLock = true
+            lives -= 1
+            updateHearts()
+
+            if lives > 0 then
+                hum.Health = FAKE_HP
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                task.delay(0.3, function()
+                    deadLock = false
+                end)
+            else
+                godEnabled = false
+                print("💀 หัวใจหมด ตายจริง")
+            end
+        end
+    end)
+
+    hum.StateChanged:Connect(function(_, new)
+        if godEnabled and new == Enum.HumanoidStateType.Dead and lives > 0 then
+            hum.Health = FAKE_HP
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        if godEnabled and lives > 0 and hum.Health <= 0 then
+            hum.Health = FAKE_HP
+        end
+    end)
+end
+-- ================= INIT =================
+if lp.Character then
+    GodMode(lp.Character)
+end
+
+lp.CharacterAdded:Connect(GodMode)
