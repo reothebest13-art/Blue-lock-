@@ -725,7 +725,7 @@ WaveTab:Toggle({
 	end
 })
 
-Tab:Button({
+WaveTab:Button({
     Title = "Tween Gap",
     Desc = "กดแล้วจะมีหน้าต่างสคริปเสริมขึ้นมา",
     Callback = function()
