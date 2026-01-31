@@ -392,6 +392,103 @@ end)
 
 
 
+
+
+-- ======
+-- Godmode
+-- =====
+-- ================= SERVICES =================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local lp = Players.LocalPlayer
+local FAKE_HP = 100000
+
+-- ================= STATE =================
+local AntiWaveEnabled = false
+local Connections = {}
+
+local function ClearConnections()
+    for _, c in ipairs(Connections) do
+        pcall(function()
+            c:Disconnect()
+        end)
+    end
+    table.clear(Connections)
+end
+
+-- ================= MAIN =================
+local function AntiWaveInfinite(char)
+    local hum = char:WaitForChild("Humanoid")
+
+    hum.BreakJointsOnDeath = false
+    hum.MaxHealth = math.huge
+    hum.Health = FAKE_HP
+
+    hum.WalkSpeed = 16
+    hum.JumpPower = 50
+    hum.UseJumpPower = true
+
+    -- กันตายจากเวฟ
+    table.insert(Connections,
+        hum:GetPropertyChangedSignal("Health"):Connect(function()
+            if not AntiWaveEnabled then return end
+            if hum.Health <= 0 then
+                hum.Health = FAKE_HP
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end)
+    )
+
+    table.insert(Connections,
+        hum.StateChanged:Connect(function(_, new)
+            if not AntiWaveEnabled then return end
+            if new == Enum.HumanoidStateType.Dead then
+                hum.Health = FAKE_HP
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end)
+    )
+
+    table.insert(Connections,
+        RunService.Heartbeat:Connect(function()
+            if not AntiWaveEnabled then return end
+            if hum.Health <= 0 then
+                hum.Health = FAKE_HP
+            end
+        end)
+    )
+end
+
+WaveTab:Toggle({
+    Title = "There are 2-3 lives",
+    Desc = "มี2-3ชีวิต",
+    Default = false,
+    Callback = function(state)
+        AntiWaveEnabled = state
+        ClearConnections()
+
+        if state then
+            if lp.Character then
+                AntiWaveInfinite(lp.Character)
+            end
+
+            table.insert(Connections,
+                lp.CharacterAdded:Connect(function(char)
+                    task.wait(0.5)
+                    if AntiWaveEnabled then
+                        AntiWaveInfinite(char)
+                    end
+                end)
+            )
+        end
+    end
+})
+
+
+
+
+
 -- --------
 -- CombatTab
 -- ----------
