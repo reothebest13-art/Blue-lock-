@@ -89,6 +89,10 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
+
+
+
 
 
 local Window = WindUI:CreateWindow({
@@ -357,6 +361,7 @@ end)
 
 -- -----------
 
+
 local AutoPromptEnabled = false
 local lastFire = {}
 
@@ -397,9 +402,6 @@ end)
 -- ======
 -- Godmode
 -- =====
--- ================= SERVICES =================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local lp = Players.LocalPlayer
 local FAKE_HP = 100000
@@ -462,6 +464,183 @@ end
 
 
 
+
+-- ------------
+--  MONEY Tab
+-- ------------
+
+-- --------------
+-- Auto upgrade 
+-- --------------
+
+
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local Net = require(ReplicatedStorage.Packages.Net)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+local lp = Players.LocalPlayer
+
+-- ===== STATE =====
+local AutoUpgrade = false
+local SelectedBrainrots = {}
+
+-- ===== FIND BASE + UUID =====
+local function getMyBaseAndUUID()
+	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+		local uuid = plot.Name
+		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
+			return uuid, Workspace.Bases:FindFirstChild(uuid)
+		end
+	end
+end
+
+-- ===== GET DROPDOWN VALUES (NO ROOT) =====
+local function getBrainrotValues()
+	local _, base = getMyBaseAndUUID()
+	if not base then
+		return { "Upgrade ALL" }
+	end
+
+	local values = { "Upgrade ALL" }
+
+	for _, slotFolder in ipairs(base:GetChildren()) do
+		if slotFolder:IsA("Folder") and slotFolder.Name:find("brainrot") then
+			local slot = slotFolder.Name:match("slot%s+(%d+)")
+			if slot then
+				for _, brainrot in ipairs(slotFolder:GetChildren()) do
+					if brainrot.Name ~= "Root" then
+						table.insert(values, "Slot "..slot.." : "..brainrot.Name)
+					end
+				end
+			end
+		end
+	end
+
+	return values
+end
+
+
+-- ===== REALTIME REFRESH DROPDOWN =====
+local lastHash = ""
+
+RunService.Heartbeat:Connect(function()
+	local values = getBrainrotValues()
+	local hash = table.concat(values, "|")
+
+	if hash ~= lastHash then
+		lastHash = hash
+		BrainrotDropdown:Refresh(values)
+	end
+end)
+
+-- ===== AUTO UPGRADE LOOP --========
+task.spawn(function()
+	while true do
+		if not AutoUpgrade then
+			task.wait(0.3)
+			continue
+		end
+
+		local uuid, base = getMyBaseAndUUID()
+		if not uuid or not base then
+			task.wait(1)
+			continue
+		end
+		if table.find(SelectedBrainrots, "Upgrade ALL") then
+			for _, slotFolder in ipairs(base:GetChildren()) do
+				if not AutoUpgrade then break end
+
+				if slotFolder:IsA("Folder") and slotFolder.Name:find("brainrot") then
+					local slot = slotFolder.Name:match("slot%s+(%d+)")
+					if slot then
+						for _, brainrot in ipairs(slotFolder:GetChildren()) do
+							if not AutoUpgrade then break end
+							if brainrot.Name ~= "Root" then
+								pcall(function()
+									PlotAction:InvokeServer(
+										"Upgrade Brainrot",
+										uuid,
+										tostring(slot)
+									)
+								end)
+								task.wait(0.08)
+							end
+						end
+					end
+				end
+			end
+		else
+			local usedSlots = {}
+
+			for _, text in ipairs(SelectedBrainrots) do
+				if not AutoUpgrade then break end
+
+				local slot = text:match("Slot%s+(%d+)")
+				if slot and not usedSlots[slot] then
+					usedSlots[slot] = true
+
+					local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
+					if slotFolder then
+						for _, brainrot in ipairs(slotFolder:GetChildren()) do
+							if not AutoUpgrade then break end
+							if brainrot.Name ~= "Root" then
+								pcall(function()
+									PlotAction:InvokeServer(
+										"Upgrade Brainrot",
+										uuid,
+										tostring(slot)
+									)
+								end)
+								task.wait(0.08)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+
+-- -------------------
+--  Auto Collect Money
+-- -------------------
+
+
+local Net = require(ReplicatedStorage.Packages.Net)
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+task.spawn(function()
+	while true do
+		if AutoCollectEnabled then
+			for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+				local uuid = plot.Name
+
+				-- เช็คว่า Plot เป็นของเรา
+				if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == Players.LocalPlayer then
+					local maxSlots = ClientGlobals.Plots:TryIndex({ uuid, "data", "MaxSlots" }) or 10
+
+					for slot = 1, maxSlots do
+						if not AutoCollectEnabled then break end
+
+						local args = {
+							"Collect Money",
+							uuid,
+							tostring(slot)
+						}
+
+						pcall(function()
+							PlotAction:InvokeServer(unpack(args))
+						end)
+
+						task.wait(0.05)
+					end
+				end
+			end
+		end
+		task.wait(0.5)
+	end
+end)
 
 
 
@@ -650,156 +829,6 @@ MainTab:Toggle({
 
 
 
-local Net = require(ReplicatedStorage.Packages.Net)
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-task.spawn(function()
-	while true do
-		if AutoCollectEnabled then
-			for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-				local uuid = plot.Name
-
-				-- เช็คว่า Plot เป็นของเรา
-				if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == Players.LocalPlayer then
-					local maxSlots = ClientGlobals.Plots:TryIndex({ uuid, "data", "MaxSlots" }) or 10
-
-					for slot = 1, maxSlots do
-						if not AutoCollectEnabled then break end
-
-						local args = {
-							"Collect Money",
-							uuid,
-							tostring(slot)
-						}
-
-						pcall(function()
-							PlotAction:InvokeServer(unpack(args))
-						end)
-
-						task.wait(0.05)
-					end
-				end
-			end
-		end
-		task.wait(0.5)
-	end
-end)
-
-
-
-MainTab:Toggle({
-    Title = "Auto Collect Money",
-    Desc = "เก็บเงินที่ฐานอัตโนมัติ",
-    Default = false,
-    Callback = function(state)
-        AutoCollectEnabled = state
-    end
-})
-
-
--- ===== Services =====
-local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local Net = require(ReplicatedStorage.Packages.Net)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-
-local lp = Players.LocalPlayer
-
--- ===== STATE =====
-local AutoUpgrade = false
-local SelectedBrainrot = nil
-
--- ===== FIND OUR BASE + UUID =====
-local function getMyBaseAndUUID()
-	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-		local uuid = plot.Name
-		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
-			return uuid, Workspace.Bases:FindFirstChild(uuid)
-		end
-	end
-end
-
--- ===== GET BRAINROT VALUES (NO ROOT) =====
-local function getBrainrotValues()
-	local _, base = getMyBaseAndUUID()
-	if not base then return { "No Base" } end
-
-	local values = {}
-
-	for slot = 1, 30 do
-		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
-		if slotFolder then
-			for _, obj in ipairs(slotFolder:GetChildren()) do
-				-- ❌ ตัด Root ออก
-				if obj.Name ~= "Root" then
-					table.insert(values, "Slot "..slot.." : "..obj.Name)
-				end
-			end
-		end
-	end
-
-	return (#values > 0) and values or { "No Brainrot" }
-end
-
--- ===== DROPDOWN (WindUI API ตามตัวอย่างคุณ) =====
-local BrainrotDropdown = MainTab:Dropdown({
-	Title = "Select Brainrot",
-	Values = getBrainrotValues(),
-	Callback = function(selected)
-		SelectedBrainrot = selected
-		print("Selected:", selected)
-	end
-})
-
--- ===== TOGGLE AUTO UPGRADE =====
-MainTab:Toggle({
-	Title = "Auto Upgrade",
-	Callback = function(state)
-		AutoUpgrade = state
-		print("Auto Upgrade:", state)
-	end
-})
-
--- ===== REAL-TIME DROPDOWN UPDATE =====
-local lastHash = ""
-
-RunService.Heartbeat:Connect(function()
-	local values = getBrainrotValues()
-	local hash = table.concat(values, "|")
-
-	if hash ~= lastHash then
-		lastHash = hash
-		BrainrotDropdown:Refresh(values)
-	end
-end)
-
--- ===== AUTO UPGRADE LOOP =====
-task.spawn(function()
-	while task.wait(2) do
-		if not AutoUpgrade then continue end
-		if not SelectedBrainrot then continue end
-
-		-- แยก slot จากข้อความ Dropdown
-		local slot = SelectedBrainrot:match("Slot%s+(%d+)")
-		if not slot then continue end
-
-		local uuid = getMyBaseAndUUID()
-		if not uuid then continue end
-
-		pcall(function()
-			PlotAction:InvokeServer(
-				"Upgrade Brainrot",
-				uuid,
-				tostring(slot)
-			)
-		end)
-	end
-end)
 
 
 
@@ -815,7 +844,6 @@ task.spawn(function()
         task.wait(0.1)
     end
 end)
-
 
 
 
@@ -862,6 +890,38 @@ WaveTab:Toggle({
                 end)
             )
         end
+    end
+})
+
+
+
+local MoneyTab = Window:Tab({Title = "Money", Icon = "scale"})
+
+
+MoneyTab:Dropdown({
+	Title = "Select Brainrot for upgrade",
+	Values = getBrainrotValues(),
+	Multi = true,
+	Callback = function(selected)
+		SelectedBrainrots = selected or {}
+	end
+})
+
+
+Money Tab:Toggle({
+	Title = "Auto Upgrade",
+	Callback = function(state)
+		AutoUpgrade = state
+	end
+})
+
+
+MoneyTab:Toggle({
+    Title = "Auto Collect Money",
+    Desc = "เก็บเงินที่ฐานอัตโนมัติ",
+    Default = false,
+    Callback = function(state)
+        AutoCollectEnabled = state
     end
 })
 
