@@ -89,7 +89,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
-
+local Workspace = game:GetService("Workspace")
 
 local Window = WindUI:CreateWindow({
     Title = "Rick HUB",
@@ -462,7 +462,136 @@ end
 
 
 
+-- ---+--------
+--  upgrade 
+-- ------------
 
+
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local Net = require(ReplicatedStorage.Packages.Net)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+local lp = Players.LocalPlayer
+
+-- ===== STATE =====
+local AutoUpgrade = false
+local SelectedBrainrots = {}
+
+-- ===== FIND BASE + UUID =====
+local function getMyBaseAndUUID()
+	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+		local uuid = plot.Name
+		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
+			return uuid, Workspace.Bases:FindFirstChild(uuid)
+		end
+	end
+end
+
+-- ===== GET DROPDOWN VALUES (NO ROOT) =====
+local function getBrainrotValues()
+	local _, base = getMyBaseAndUUID()
+	if not base then
+		return { "Upgrade ALL" }
+	end
+
+	local values = { "Upgrade ALL" }
+
+	for _, slotFolder in ipairs(base:GetChildren()) do
+		if slotFolder:IsA("Folder") and slotFolder.Name:find("brainrot") then
+			local slot = slotFolder.Name:match("slot%s+(%d+)")
+			if slot then
+				for _, brainrot in ipairs(slotFolder:GetChildren()) do
+					if brainrot.Name ~= "Root" then
+						table.insert(values, "Slot "..slot.." : "..brainrot.Name)
+					end
+				end
+			end
+		end
+	end
+
+	return values
+end
+
+
+
+local lastHash = ""
+
+RunService.Heartbeat:Connect(function()
+	local values = getBrainrotValues()
+	local hash = table.concat(values, "|")
+
+	if hash ~= lastHash then
+		lastHash = hash
+		BrainrotDropdown:Refresh(values)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		if not AutoUpgrade then
+			task.wait(0.3)
+			continue
+		end
+
+		local uuid, base = getMyBaseAndUUID()
+		if not uuid or not base then
+			task.wait(1)
+			continue
+		end
+		if table.find(SelectedBrainrots, "Upgrade ALL") then
+			for _, slotFolder in ipairs(base:GetChildren()) do
+				if not AutoUpgrade then break end
+
+				if slotFolder:IsA("Folder") and slotFolder.Name:find("brainrot") then
+					local slot = slotFolder.Name:match("slot%s+(%d+)")
+					if slot then
+						for _, brainrot in ipairs(slotFolder:GetChildren()) do
+							if not AutoUpgrade then break end
+							if brainrot.Name ~= "Root" then
+								pcall(function()
+									PlotAction:InvokeServer(
+										"Upgrade Brainrot",
+										uuid,
+										tostring(slot)
+									)
+								end)
+								task.wait(0.08)
+							end
+						end
+					end
+				end
+			end
+		else
+			local usedSlots = {}
+
+			for _, text in ipairs(SelectedBrainrots) do
+				if not AutoUpgrade then break end
+
+				local slot = text:match("Slot%s+(%d+)")
+				if slot and not usedSlots[slot] then
+					usedSlots[slot] = true
+
+					local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
+					if slotFolder then
+						for _, brainrot in ipairs(slotFolder:GetChildren()) do
+							if not AutoUpgrade then break end
+							if brainrot.Name ~= "Root" then
+								pcall(function()
+									PlotAction:InvokeServer(
+										"Upgrade Brainrot",
+										uuid,
+										tostring(slot)
+									)
+								end)
+								task.wait(0.08)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end)
 
 
 
@@ -648,7 +777,22 @@ MainTab:Toggle({
     end
 })
 
+local BrainrotDropdown = MainTab:Dropdown({
+	Title = "Select Brainrot",
+	Values = getBrainrotValues(),
+	Multi = true,
+	Callback = function(selected)
+		SelectedBrainrots = selected or {}
+	end
+})
 
+
+MainTab:Toggle({
+	Title = "Auto Upgrade",
+	Callback = function(state)
+		AutoUpgrade = state
+	end
+})
 
 local Net = require(ReplicatedStorage.Packages.Net)
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
