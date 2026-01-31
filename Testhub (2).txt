@@ -190,6 +190,10 @@ local char, hrp
 
 
 
+-- ====
+-- Dodge Wave
+-- ===========
+
 local GapsRoot = workspace:WaitForChild("Misc"):WaitForChild("Gaps")
 
 
@@ -347,68 +351,14 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- --------
--- CombatTab
--- ----------
+-- ===============================
 
+-- Auto pickup 
 
-
-local MainTab = Window:Tab({Title = "Main", Icon = "user"})
-
-MainTab:Toggle({
-	Title = "Auto dodge Wave🌊",
-	Desc = "หนีคลื่นอัตโนมัติ",
-	Default = false,
-	Callback = function(state)
-		Enabled = state
-	end
-})
-
-
-Tab:Button({
-    Title = "Tween Gap",
-    Desc = "กดแล้วจะมีหน้าต่างสคริปเสริมขึ้นมา",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/reothebest13-art/ERROR-HUB/refs/heads/main/Gaptween"))()
-    end
-})
-
-
-
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-local zoomConnection
-
-MainTab:Button({
-    Title = "Unlock Camera Zoom",
-    Desc = "ทำให้ซูมไกล",
-    Callback = function()
-        if zoomConnection then
-            zoomConnection:Disconnect()
-            zoomConnection = nil
-        end
-
-        zoomConnection = RunService.RenderStepped:Connect(function()
-            player.CameraMode = Enum.CameraMode.Classic
-            camera.CameraType = Enum.CameraType.Custom
-            player.CameraMinZoomDistance = 0.5
-            player.CameraMaxZoomDistance = 1000
-        end)
-
-        WindUi:Notify({
-            Title = "unlockCamera Zoom✅",
-            Content = "ปลดล็อกซูม✅",
-            Duration = 3
-        })
-    end
-})
-
-local lp = Players.LocalPlayer
-
+-- -----------
 
 local AutoPromptEnabled = false
 local lastFire = {}
-
 
 for _, v in ipairs(workspace:GetDescendants()) do
 	if v:IsA("ProximityPrompt") then
@@ -440,124 +390,14 @@ ProximityPromptService.PromptShown:Connect(function(prompt)
 	end
 end)
 
-MainTab:Toggle({
-    Title = "Auto pick Brainrots",
-    Desc = "หยิบเบรอสอัตโนมัติ",
-    Default = false,
-    Callback = function(state)
-        AutoPromptEnabled = state
-    end
-})
 
 
-
-local Net = require(ReplicatedStorage.Packages.Net)
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-
-
-
--- ===== Auto Collect Loop =====
-task.spawn(function()
-	while true do
-		if AutoCollectEnabled then
-			for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-				local uuid = plot.Name
-
-				-- เช็คว่า Plot เป็นของเรา
-				if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == Players.LocalPlayer then
-					local maxSlots = ClientGlobals.Plots:TryIndex({ uuid, "data", "MaxSlots" }) or 10
-
-					for slot = 1, maxSlots do
-						if not AutoCollectEnabled then break end
-
-						local args = {
-							"Collect Money",
-							uuid,
-							tostring(slot)
-						}
-
-						pcall(function()
-							PlotAction:InvokeServer(unpack(args))
-						end)
-
-						task.wait(0.05)
-					end
-				end
-			end
-		end
-		task.wait(0.5)
-	end
-end)
-
-
-
-MainTab:Toggle({
-    Title = "Auto Collect Money",
-    Desc = "เก็บเงินที่ฐานอัตโนมัติ",
-    Default = false,
-    Callback = function(state)
-        AutoCollectEnabled = state
-    end
-})
-
-local localPlayer = Players.LocalPlayer
-getgenv().SPEED_VALUE = 500
-getgenv().SPEED_ON = false
-
-task.spawn(function()
-    while true do
-        if getgenv().SPEED_ON then
-            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
-        end
-        task.wait(0.1)
-    end
-end)
-
-MainTab:Toggle({
-    Title = "walk Speed",
-    Desc = "วิ่งเร็ว",
-    Default = false,
-    Callback = function(state)
-        getgenv().SPEED_ON = state
-        if state then
-            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
-        end
-    end
-})
-
-
-MainTab:Slider({
-    Title = "Speed Value",
-    Desc = "ปรับสปีด",
-    Step = 1,
-    Value = {
-        Min = 0,
-        Max = 3000,
-        Default = 500,
-    },
-    Callback = function(value)
-        getgenv().SPEED_VALUE = value
-        if getgenv().SPEED_ON then
-            localPlayer:SetAttribute("CurrentSpeed", value)
-        end
-    end
-})
-
-local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
-
-
-ESPTab:Section({
-    Title = "มันบัคอยู่เดะเพิ่มให้ทีหลัง"
-})
- 
-
-local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
-
+-- --------
+-- CombatTab
+-- ----------
 
 local lp = Players.LocalPlayer
 local bp = lp:WaitForChild("Backpack")
-
 
 -- ====== VISUAL ======
 local function createBoxVisual(parent, size)
@@ -655,8 +495,189 @@ bp.ChildAdded:Connect(setupTool)
 
 
 
+
+local MainTab = Window:Tab({Title = "Main", Icon = "user"})
+
+
+
+
+MainTab:Toggle({
+    Title = "walk Speed",
+    Desc = "วิ่งเร็ว",
+    Default = false,
+    Callback = function(state)
+        getgenv().SPEED_ON = state
+        if state then
+            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
+        end
+    end
+})
+
+
+MainTab:Slider({
+    Title = "Speed Value",
+    Desc = "ปรับสปีด",
+    Step = 1,
+    Value = {
+        Min = 0,
+        Max = 3000,
+        Default = 500,
+    },
+    Callback = function(value)
+        getgenv().SPEED_VALUE = value
+        if getgenv().SPEED_ON then
+            localPlayer:SetAttribute("CurrentSpeed", value)
+        end
+    end
+})
+
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local zoomConnection
+
+MainTab:Button({
+    Title = "Unlock Camera Zoom",
+    Desc = "ทำให้ซูมไกล",
+    Callback = function()
+        if zoomConnection then
+            zoomConnection:Disconnect()
+            zoomConnection = nil
+        end
+
+        zoomConnection = RunService.RenderStepped:Connect(function()
+            player.CameraMode = Enum.CameraMode.Classic
+            camera.CameraType = Enum.CameraType.Custom
+            player.CameraMinZoomDistance = 0.5
+            player.CameraMaxZoomDistance = 1000
+        end)
+
+        WindUi:Notify({
+            Title = "unlockCamera Zoom✅",
+            Content = "ปลดล็อกซูม✅",
+            Duration = 3
+        })
+    end
+})
+
+local lp = Players.LocalPlayer
+
+
+
+
+MainTab:Toggle({
+    Title = "Auto pick Brainrots",
+    Desc = "หยิบเบรอสอัตโนมัติ",
+    Default = false,
+    Callback = function(state)
+        AutoPromptEnabled = state
+    end
+})
+
+
+
+local Net = require(ReplicatedStorage.Packages.Net)
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+task.spawn(function()
+	while true do
+		if AutoCollectEnabled then
+			for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+				local uuid = plot.Name
+
+				-- เช็คว่า Plot เป็นของเรา
+				if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == Players.LocalPlayer then
+					local maxSlots = ClientGlobals.Plots:TryIndex({ uuid, "data", "MaxSlots" }) or 10
+
+					for slot = 1, maxSlots do
+						if not AutoCollectEnabled then break end
+
+						local args = {
+							"Collect Money",
+							uuid,
+							tostring(slot)
+						}
+
+						pcall(function()
+							PlotAction:InvokeServer(unpack(args))
+						end)
+
+						task.wait(0.05)
+					end
+				end
+			end
+		end
+		task.wait(0.5)
+	end
+end)
+
+
+
+MainTab:Toggle({
+    Title = "Auto Collect Money",
+    Desc = "เก็บเงินที่ฐานอัตโนมัติ",
+    Default = false,
+    Callback = function(state)
+        AutoCollectEnabled = state
+    end
+})
+
+local localPlayer = Players.LocalPlayer
+getgenv().SPEED_VALUE = 500
+getgenv().SPEED_ON = false
+
+task.spawn(function()
+    while true do
+        if getgenv().SPEED_ON then
+            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
+        end
+        task.wait(0.1)
+    end
+end)
+
+
+
+
+
+local WaveTab = Window:Tab({Title = "Wave", Icon = "user"})
+
+
+WaveTab:Toggle({
+	Title = "Auto dodge Wave🌊",
+	Desc = "หนีคลื่นอัตโนมัติ",
+	Default = false,
+	Callback = function(state)
+		Enabled = state
+	end
+})
+
+Tab:Button({
+    Title = "Tween Gap",
+    Desc = "กดแล้วจะมีหน้าต่างสคริปเสริมขึ้นมา",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/reothebest13-art/ERROR-HUB/refs/heads/main/Gaptween"))()
+    end
+})
+
+
+
+
+local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
+
+
+ESPTab:Section({
+    Title = "มันบัคอยู่เดะเพิ่มให้ทีหลัง"
+})
+
+
+
+local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
+
+
+
 CombatTab:Toggle({
     Title = "Hit Long",
+    Desc = "ตีไกล",
     Value = false,
     Callback = function(state)
         HitLongEnabled = state
@@ -668,6 +689,7 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Show hit range",
+    Desc = "โชว์ระยะการตี",
     Value = false,
     Callback = function(state)
         ShowRangeEnabled = state
@@ -679,6 +701,7 @@ CombatTab:Toggle({
 
 CombatTab:Slider({
     Title = "hit range Value",
+    Desc = "ปรับระยะการตี",
     Value = { Min = 10, Max = 200, Default = 50 },
     Step = 1,
     Callback = function(value)
