@@ -397,6 +397,13 @@ end)
 -- --------------
 
 
+-- ===== Services =====
+local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
 local Net = require(ReplicatedStorage.Packages.Net)
 local PlotAction = Net:RemoteFunction("Plot.PlotAction")
@@ -405,7 +412,7 @@ local lp = Players.LocalPlayer
 
 -- ===== STATE =====
 local AutoUpgrade = false
-local SelectedBrainrots = {} -- multi select
+local SelectedBrainrots = {} -- << เลือกหลายอัน
 
 -- ===== FIND OUR BASE + UUID =====
 local function getMyBaseAndUUID()
@@ -423,7 +430,6 @@ local function getBrainrotValues()
 	if not base then return { "No Base" } end
 
 	local values = {}
-
 	for slot = 1, 30 do
 		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
 		if slotFolder then
@@ -437,6 +443,8 @@ local function getBrainrotValues()
 
 	return (#values > 0) and values or { "No Brainrot" }
 end
+
+-- ===== DROPDOWN (MULTI) =====
 
 
 
@@ -694,39 +702,38 @@ MainTab:Toggle({
 })
 
 
-
-
-
--- ===== DROPDOWN (MULTI SELECT) =====
 local BrainrotDropdown = MainTab:Dropdown({
-	Title = "Select Brainrot for Auto upgrade",
+	Title = "Select Brainrot for upgrade",
+    Desc = "เลือกสมองเน่าจะอัพเกรด",
 	Values = getBrainrotValues(),
-	Multi = true,
+	Multi = true, -- ⭐ เลือกหลายอัน
 	Callback = function(selected)
 		SelectedBrainrots = selected
 	end
 })
 
+
 MainTab:Toggle({
 	Title = "Auto Upgrade",
-    Desc = "ออโต้อัพเกรดสมองเน่าส",
+    Desc = "ออโต้อัพเกรดสมองเน่าที่เลือก",
 	Default = false,
 	Callback = function(state)
 		AutoUpgrade = state
 	end
 })
 
+-- ===== REAL-TIME DROPDOWN UPDATE =====
 local lastHash = ""
-
 RunService.Heartbeat:Connect(function()
 	local values = getBrainrotValues()
 	local hash = table.concat(values, "|")
-
 	if hash ~= lastHash then
 		lastHash = hash
 		BrainrotDropdown:Refresh(values)
 	end
 end)
+
+-- ===== AUTO UPGRADE LOOP (MULTI + กัน WindUI 2 รูปแบบ) =====
 task.spawn(function()
 	while task.wait(2) do
 		if not AutoUpgrade then continue end
@@ -735,8 +742,16 @@ task.spawn(function()
 		local uuid = getMyBaseAndUUID()
 		if not uuid then continue end
 
-		for text, enabled in pairs(SelectedBrainrots) do
-			if enabled then
+		for k, v in pairs(SelectedBrainrots) do
+			local text
+			-- รองรับทั้ง array และ map
+			if type(v) == "string" then
+				text = v      -- array
+			elseif v == true then
+				text = k      -- map
+			end
+
+			if text then
 				local slot = text:match("Slot%s+(%d+)")
 				if slot then
 					pcall(function()
@@ -751,7 +766,6 @@ task.spawn(function()
 		end
 	end
 end)
-
 
 
 local Net = require(ReplicatedStorage.Packages.Net)
