@@ -89,7 +89,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
-local Workspace = game:GetService("Workspace")
 
 
 local Window = WindUI:CreateWindow({
@@ -185,10 +184,9 @@ local AutoCollectEnabled = false
 local HitLongEnabled = false
 local ShowRangeEnabled = false
 local HitRangeValue = 50
-local Connections = {}
 local ORIGINAL_SIZES = {}
+local Connections = {}
 local char, hrp
-
 
 
 
@@ -393,67 +391,15 @@ ProximityPromptService.PromptShown:Connect(function(prompt)
 end)
 
 
--- --------------
--- auto upgrade 
--- --------------
-
-
--- ===== Services =====
-local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
-local Net = require(ReplicatedStorage.Packages.Net)
-local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-
-local lp = Players.LocalPlayer
-
--- ===== STATE =====
-local AutoUpgrade = false
-local SelectedBrainrots = {} -- << เลือกหลายอัน
-
--- ===== FIND OUR BASE + UUID =====
-local function getMyBaseAndUUID()
-	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
-		local uuid = plot.Name
-		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
-			return uuid, Workspace.Bases:FindFirstChild(uuid)
-		end
-	end
-end
-
--- ===== GET BRAINROT VALUES (NO ROOT) =====
-local function getBrainrotValues()
-	local _, base = getMyBaseAndUUID()
-	if not base then return { "No Base" } end
-
-	local values = {}
-	for slot = 1, 30 do
-		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
-		if slotFolder then
-			for _, obj in ipairs(slotFolder:GetChildren()) do
-				if obj.Name ~= "Root" then
-					table.insert(values, "Slot "..slot.." : "..obj.Name)
-				end
-			end
-		end
-	end
-
-	return (#values > 0) and values or { "No Brainrot" }
-end
-
--- ===== DROPDOWN (MULTI) =====
-
 
 
 
 -- ======
 -- Godmode
 -- =====
-
+-- ================= SERVICES =================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local lp = Players.LocalPlayer
 local FAKE_HP = 100000
@@ -524,11 +470,10 @@ end
 -- CombatTab
 -- ----------
 
-
 local lp = Players.LocalPlayer
+local bp = lp:WaitForChild("Backpack")
 
-
--- ===== VISUAL =====
+-- ====== VISUAL ======
 local function createBoxVisual(parent, size)
     local box = Instance.new("Part")
     box.Name = "BoxVisual"
@@ -550,9 +495,8 @@ local function createBoxVisual(parent, size)
     return box
 end
 
--- ===== APPLY HITBOX =====
+-- ====== APPLY HITBOX ======
 local function applyHitbox(tool)
-    if not tool or not tool:IsA("Tool") then return end
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
 
@@ -562,14 +506,15 @@ local function applyHitbox(tool)
 
     if HitLongEnabled then
         hitbox.Size = Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
+        tool.ToolTip = ("📦 Hit Range\nSize: %d×%d×%d")
+            :format(HitRangeValue, HitRangeValue, HitRangeValue)
     else
         hitbox.Size = ORIGINAL_SIZES[hitbox]
     end
 end
 
--- ===== APPLY VISUAL =====
+-- ====== APPLY VISUAL ======
 local function applyVisual(tool)
-    if not tool or not tool:IsA("Tool") then return end
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
 
@@ -580,6 +525,7 @@ local function applyVisual(tool)
 
     local old = tool:FindFirstChild("BoxVisual")
     if old then old:Destroy() end
+
     if not ShowRangeEnabled then return end
 
     local box = createBoxVisual(
@@ -594,7 +540,7 @@ local function applyVisual(tool)
     end)
 end
 
--- ===== TOOL SETUP =====
+-- ====== TOOL SETUP ======
 local function setupTool(tool)
     if not tool:IsA("Tool") then return end
     if not tool:FindFirstChild("Hitbox") then return end
@@ -615,39 +561,11 @@ local function setupTool(tool)
     end)
 end
 
--- ===== INIT BACKPACK =====
-local function initBackpack()
-    local bp = lp:WaitForChild("Backpack")
-
-    for _, tool in ipairs(bp:GetChildren()) do
-        setupTool(tool)
-        applyHitbox(tool)
-        applyVisual(tool)
-    end
-
-    bp.ChildAdded:Connect(function(tool)
-        task.wait()
-        setupTool(tool)
-        applyHitbox(tool)
-        applyVisual(tool)
-    end)
+-- ====== INIT ======
+for _, tool in ipairs(bp:GetChildren()) do
+    setupTool(tool)
 end
-
--- ===== RESPAWN FIX (สำคัญ) =====
-lp.CharacterAdded:Connect(function()
-    task.wait(1)
-
-    for _, conn in pairs(Connections) do
-        if conn then conn:Disconnect() end
-    end
-    table.clear(Connections)
-    table.clear(ORIGINAL_SIZES)
-
-    initBackpack()
-end)
-
--- ===== FIRST INIT =====
-initBackpack()
+bp.ChildAdded:Connect(setupTool)
 
 
 
@@ -731,71 +649,6 @@ MainTab:Toggle({
 })
 
 
-local BrainrotDropdown = MainTab:Dropdown({
-	Title = "Select Brainrot for upgrade",
-    Desc = "เลือกสมองเน่าจะอัพเกรด",
-	Values = getBrainrotValues(),
-	Multi = true, -- ⭐ เลือกหลายอัน
-	Callback = function(selected)
-		SelectedBrainrots = selected
-	end
-})
-
-
-MainTab:Toggle({
-	Title = "Auto Upgrade",
-    Desc = "ออโต้อัพเกรดสมองเน่าที่เลือก",
-	Default = false,
-	Callback = function(state)
-		AutoUpgrade = state
-	end
-})
-
--- ===== REAL-TIME DROPDOWN UPDATE =====
-local lastHash = ""
-RunService.Heartbeat:Connect(function()
-	local values = getBrainrotValues()
-	local hash = table.concat(values, "|")
-	if hash ~= lastHash then
-		lastHash = hash
-		BrainrotDropdown:Refresh(values)
-	end
-end)
-
--- ===== AUTO UPGRADE LOOP (MULTI + กัน WindUI 2 รูปแบบ) =====
-task.spawn(function()
-	while task.wait(2) do
-		if not AutoUpgrade then continue end
-		if not next(SelectedBrainrots) then continue end
-
-		local uuid = getMyBaseAndUUID()
-		if not uuid then continue end
-
-		for k, v in pairs(SelectedBrainrots) do
-			local text
-			-- รองรับทั้ง array และ map
-			if type(v) == "string" then
-				text = v      -- array
-			elseif v == true then
-				text = k      -- map
-			end
-
-			if text then
-				local slot = text:match("Slot%s+(%d+)")
-				if slot then
-					pcall(function()
-						PlotAction:InvokeServer(
-							"Upgrade Brainrot",
-							uuid,
-							tostring(slot)
-						)
-					end)
-				end
-			end
-		end
-	end
-end)
-
 
 local Net = require(ReplicatedStorage.Packages.Net)
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
@@ -843,6 +696,110 @@ MainTab:Toggle({
     end
 })
 
+
+-- ===== Services =====
+local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
+local Net = require(ReplicatedStorage.Packages.Net)
+local PlotAction = Net:RemoteFunction("Plot.PlotAction")
+
+local lp = Players.LocalPlayer
+
+-- ===== STATE =====
+local AutoUpgrade = false
+local SelectedBrainrot = nil
+
+-- ===== FIND OUR BASE + UUID =====
+local function getMyBaseAndUUID()
+	for _, plot in ipairs(CollectionService:GetTagged("Plot")) do
+		local uuid = plot.Name
+		if ClientGlobals.Plots:TryIndex({ uuid, "player" }) == lp then
+			return uuid, Workspace.Bases:FindFirstChild(uuid)
+		end
+	end
+end
+
+-- ===== GET BRAINROT VALUES (NO ROOT) =====
+local function getBrainrotValues()
+	local _, base = getMyBaseAndUUID()
+	if not base then return { "No Base" } end
+
+	local values = {}
+
+	for slot = 1, 30 do
+		local slotFolder = base:FindFirstChild("slot "..slot.." brainrot")
+		if slotFolder then
+			for _, obj in ipairs(slotFolder:GetChildren()) do
+				-- ❌ ตัด Root ออก
+				if obj.Name ~= "Root" then
+					table.insert(values, "Slot "..slot.." : "..obj.Name)
+				end
+			end
+		end
+	end
+
+	return (#values > 0) and values or { "No Brainrot" }
+end
+
+-- ===== DROPDOWN (WindUI API ตามตัวอย่างคุณ) =====
+local BrainrotDropdown = MainTab:Dropdown({
+	Title = "Select Brainrot",
+	Values = getBrainrotValues(),
+	Callback = function(selected)
+		SelectedBrainrot = selected
+		print("Selected:", selected)
+	end
+})
+
+-- ===== TOGGLE AUTO UPGRADE =====
+MainTab:Toggle({
+	Title = "Auto Upgrade",
+	Callback = function(state)
+		AutoUpgrade = state
+		print("Auto Upgrade:", state)
+	end
+})
+
+-- ===== REAL-TIME DROPDOWN UPDATE =====
+local lastHash = ""
+
+RunService.Heartbeat:Connect(function()
+	local values = getBrainrotValues()
+	local hash = table.concat(values, "|")
+
+	if hash ~= lastHash then
+		lastHash = hash
+		BrainrotDropdown:Refresh(values)
+	end
+end)
+
+-- ===== AUTO UPGRADE LOOP =====
+task.spawn(function()
+	while task.wait(2) do
+		if not AutoUpgrade then continue end
+		if not SelectedBrainrot then continue end
+
+		-- แยก slot จากข้อความ Dropdown
+		local slot = SelectedBrainrot:match("Slot%s+(%d+)")
+		if not slot then continue end
+
+		local uuid = getMyBaseAndUUID()
+		if not uuid then continue end
+
+		pcall(function()
+			PlotAction:InvokeServer(
+				"Upgrade Brainrot",
+				uuid,
+				tostring(slot)
+			)
+		end)
+	end
+end)
 
 
 
@@ -928,8 +885,6 @@ CombatTab:Toggle({
     Value = false,
     Callback = function(state)
         HitLongEnabled = state
-        local bp = lp:FindFirstChild("Backpack")
-        if not bp then return end
         for _, tool in ipairs(bp:GetChildren()) do
             applyHitbox(tool)
         end
@@ -942,8 +897,6 @@ CombatTab:Toggle({
     Value = false,
     Callback = function(state)
         ShowRangeEnabled = state
-        local bp = lp:FindFirstChild("Backpack")
-        if not bp then return end
         for _, tool in ipairs(bp:GetChildren()) do
             applyVisual(tool)
         end
@@ -957,23 +910,21 @@ CombatTab:Slider({
     Step = 1,
     Callback = function(value)
         HitRangeValue = value
-        local bp = lp:FindFirstChild("Backpack")
-        if not bp then return end
 
         for _, tool in ipairs(bp:GetChildren()) do
             if HitLongEnabled then
                 applyHitbox(tool)
             end
 
-            local box = tool:FindFirstChild("BoxVisual")
-            if box then
-                box.Size = Vector3.new(value, value, value)
+            if ShowRangeEnabled then
+                local box = tool:FindFirstChild("BoxVisual")
+                if box then
+                    box.Size = Vector3.new(value, value, value)
+                end
             end
         end
     end
 })
-
-
 
 
 
