@@ -572,7 +572,7 @@ bp.ChildAdded:Connect(setupTool)
 
 local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
--- ===== Services =====
+-- ================= SERVICES =================
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -582,13 +582,11 @@ local lp = Players.LocalPlayer
 local char = lp.Character or lp.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- ===== CONFIG =====
+-- ================= CONFIG =================
 local SPEED = 330
 local TRIGGER_DISTANCE = 150
 local COOLDOWN = 1.2
-
-local WAVE_CHECK_INTERVAL = 0.15
-local PROMPT_CHECK_INTERVAL = 0.2
+local PICKUP_DISTANCE = 12 -- กันหยิบไกล / UI โผล่ไกล
 
 local FINAL_CFRAME = CFrame.new(
 	129.496, 3.180, 46.862,
@@ -597,7 +595,7 @@ local FINAL_CFRAME = CFrame.new(
 	-0.999738, 0, -0.022875
 )
 
--- ===== GAPS =====
+-- ================= GAPS =================
 local GAPS = {
 	CFrame.new(200, -2.82, 0),
 	CFrame.new(284, -2.82, 0),
@@ -610,21 +608,38 @@ local GAPS = {
 	CFrame.new(2623.554, -2.82, -1.051)
 }
 
--- ===== FIX PROMPTS =====
-for _, v in ipairs(Workspace:GetDescendants()) do
-	if v:IsA("ProximityPrompt") then
-		v.HoldDuration = 0
-		v.RequiresLineOfSight = false
-		v.MaxActivationDistance = math.huge
-		v.Enabled = true
-	end
-end
 
--- ===== STATE =====
-local AutoFarmEnabled = false
+local BrainrotOptions = {
+	"Legendary",
+	"Mythical",
+	"Secret",
+	"Cosmic",
+}
+
 local SelectedBrainrots = {}
+local AutoFarmEnabled = false
+MainTab:Dropdown({
+	Title = "Select Brainrot Types",
+	Desc = "Choose multiple Brainrot categories",
+	Values = BrainrotOptions,
+	Value = {},
+	Multi = true,
+	AllowNone = true,
+	Callback = function(option)
+		SelectedBrainrots = option
+	end
+})
 
--- ===== Utils =====
+MainTab:Toggle({
+	Title = "Auto Brainrot Farm",
+	Desc = "Auto collect selected Brainrots",
+	Value = false,
+	Callback = function(state)
+		AutoFarmEnabled = state
+	end
+})
+
+-- ================= UTILS =================
 local function getMaxCarry()
 	return lp:GetAttribute("MaxCarry") or 0
 end
@@ -641,45 +656,49 @@ local function countRendered()
 	return c
 end
 
--- ===== Brainrot Filter =====
-local function isBrainrotAllowed(model)
-	if #SelectedBrainrots == 0 then
-		return true
-	end
+-- ================= SELECTED FOLDERS =================
+local function getSelectedBrainrotFolders()
+	local folders = {}
 
-	local rarity = model:GetAttribute("Rarity") or model.Name
-	for _, v in ipairs(SelectedBrainrots) do
-		if tostring(rarity):lower():find(v:lower()) then
-			return true
+	if #SelectedBrainrots == 0 then
+		for _, f in ipairs(Workspace.ActiveBrainrots:GetChildren()) do
+			table.insert(folders, f)
+		end
+	else
+		for _, name in ipairs(SelectedBrainrots) do
+			local folder = Workspace.ActiveBrainrots:FindFirstChild(name)
+			if folder then
+				table.insert(folders, folder)
+			end
 		end
 	end
-	return false
+
+	return folders
 end
 
--- ===== Nearest Brainrot =====
-local function getNearestRendered()
-	if not AutoFarmEnabled then return end
-
-	local root = Workspace.ActiveBrainrots.Common.RenderedBrainrot
-	if not root then return end
-
+-- ================= NEAREST TARGET =================
+local function getNearestSelectedBrainrot()
 	local nearest, shortest = nil, math.huge
-	for _, model in ipairs(root:GetChildren()) do
-		if model:IsA("Model") and isBrainrotAllowed(model) then
-			local part = model:FindFirstChildWhichIsA("BasePart")
-			if part then
-				local d = (part.Position - hrp.Position).Magnitude
-				if d < shortest then
-					shortest = d
-					nearest = part
+
+	for _, folder in ipairs(getSelectedBrainrotFolders()) do
+		for _, model in ipairs(folder:GetChildren()) do
+			if model:IsA("Model") then
+				local part = model:FindFirstChildWhichIsA("BasePart")
+				if part then
+					local d = (part.Position - hrp.Position).Magnitude
+					if d < shortest then
+						shortest = d
+						nearest = part
+					end
 				end
 			end
 		end
 	end
+
 	return nearest, shortest
 end
 
--- ===== Tween =====
+-- ================= TWEEN =================
 local currentTween
 local busyEvade = false
 
@@ -700,9 +719,7 @@ local function tweenTo(cf, dist)
 	currentTween:Play()
 end
 
--- ===== Wave Evade (Optimized) =====
-local lastWaveCheck = 0
-
+-- ================= WAVE EVADE =================
 local function isBehindWave(wavePos, gapPos)
 	return ((hrp.Position - wavePos).Unit):Dot((gapPos - wavePos).Unit) < 0
 end
@@ -717,68 +734,52 @@ local function getBestGap(wavePos)
 			end
 		end
 	end
-	return best, shortest
+	return best
 end
 
-local function evadeWave(wavePos)
-	if busyEvade then return end
-	busyEvade = true
-	stopTween()
+local function checkWave()
+	if not Workspace:FindFirstChild("ActiveTsunamis") then return false end
 
-	local target, dist = getBestGap(wavePos)
-	if target then
-		tweenTo(target, dist)
-	end
-
-	task.delay(COOLDOWN, function()
-		busyEvade = false
-	end)
-end
-
-local function checkWaveOptimized()
-	if tick() - lastWaveCheck < WAVE_CHECK_INTERVAL then return false end
-	lastWaveCheck = tick()
-
-	local folder = Workspace:FindFirstChild("ActiveTsunamis")
-	if not folder then return false end
-
-	for _, obj in ipairs(folder:GetDescendants()) do
-		if obj:IsA("BasePart") then
-			if (hrp.Position - obj.Position).Magnitude <= TRIGGER_DISTANCE then
-				evadeWave(obj.Position)
-				return true
+	for _, model in ipairs(Workspace.ActiveTsunamis:GetChildren()) do
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if (hrp.Position - p.Position).Magnitude <= TRIGGER_DISTANCE then
+					if not busyEvade then
+						busyEvade = true
+						stopTween()
+						local cf = getBestGap(p.Position)
+						if cf then tweenTo(cf) end
+						task.delay(COOLDOWN, function()
+							busyEvade = false
+						end)
+					end
+					return true
+				end
 			end
 		end
 	end
 	return false
 end
 
--- ===== Auto Pick (Optimized + Filtered) =====
-local lastPromptCheck = 0
+-- ================= AUTO PICKUP (FIX FAR UI) =================
 local lastFire = {}
 
-local function autoFirePromptsOptimized()
-	if not AutoFarmEnabled then return end
-	if tick() - lastPromptCheck < PROMPT_CHECK_INTERVAL then return end
-	lastPromptCheck = tick()
+local function tryPickup(targetPart)
+	if not targetPart then return end
+	local model = targetPart:FindFirstAncestorOfClass("Model")
+	if not model then return end
 
-	local root = Workspace.ActiveBrainrots.Common.RenderedBrainrot
-	if not root then return end
-
-	for _, model in ipairs(root:GetChildren()) do
-		if model:IsA("Model") and isBrainrotAllowed(model) then
-			for _, prompt in ipairs(model:GetDescendants()) do
-				if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-					local part = prompt.Parent
-					if part and part:IsA("BasePart") then
-						if (part.Position - hrp.Position).Magnitude <= 15 then
-							if not lastFire[prompt] or tick() - lastFire[prompt] > 0.15 then
-								lastFire[prompt] = tick()
-								pcall(function()
-									fireproximityprompt(prompt)
-								end)
-							end
-						end
+	for _, prompt in ipairs(model:GetDescendants()) do
+		if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+			local part = prompt.Parent
+			if part and part:IsA("BasePart") then
+				local d = (part.Position - hrp.Position).Magnitude
+				if d <= PICKUP_DISTANCE then
+					if not lastFire[prompt] or tick() - lastFire[prompt] > 0.25 then
+						lastFire[prompt] = tick()
+						pcall(function()
+							fireproximityprompt(prompt)
+						end)
 					end
 				end
 			end
@@ -786,69 +787,24 @@ local function autoFirePromptsOptimized()
 	end
 end
 
--- ===== MAIN LOOP =====
+-- ================= MAIN LOOP =================
 RunService.Heartbeat:Connect(function()
 	if not AutoFarmEnabled then return end
 
-	if checkWaveOptimized() then return end
+	if checkWave() then return end
 
 	if getMaxCarry() > 0 and countRendered() >= getMaxCarry() then
 		tweenTo(FINAL_CFRAME)
 		return
 	end
 
-	local target, dist = getNearestRendered()
+	local target, dist = getNearestSelectedBrainrot()
 	if target and not busyEvade then
 		tweenTo(target.CFrame, dist)
+		tryPickup(target)
 	end
-
-	autoFirePromptsOptimized()
 end)
 
---------------------------------------------------
--- =============== UI (อยู่ล่าง) =================
---------------------------------------------------
-
-local BrainrotOptions = {
-	"Legendary",
-	"Mythical",
-	"Secret",
-	"Cosmic",
-}
-
-MainTab:Dropdown({
-	Title = "Select Brainrot Types",
-	Desc = "Choose multiple Brainrot categories",
-	Values = BrainrotOptions,
-	Value = {},
-	Multi = true,
-	AllowNone = true,
-	Callback = function(option)
-		SelectedBrainrots = option or {}
-	end
-})
-
-MainTab:Toggle({
-	Title = "Auto Brainrot",
-	Desc = "Toggle auto collect",
-	Value = false,
-	Callback = function(state)
-		AutoFarmEnabled = state
-	end
-})
-
-
-MainTab:Toggle({
-    Title = "walk Speed",
-    Desc = "วิ่งเร็ว",
-    Default = false,
-    Callback = function(state)
-        getgenv().SPEED_ON = state
-        if state then
-            localPlayer:SetAttribute("CurrentSpeed", getgenv().SPEED_VALUE)
-        end
-    end
-})
 
 
 MainTab:Slider({
