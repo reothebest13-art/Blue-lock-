@@ -573,7 +573,85 @@ bp.ChildAdded:Connect(setupTool)
 local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
 
+-- ===== Services =====
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
+local lp = Players.LocalPlayer
+
+-- ===== States =====
+local AutoFarmEnabled = false
+local SelectedBrainrots = {}
+
+-- ===== ดึง Brainrot Folders อัตโนมัติ =====
+local function getBrainrotData()
+	local folders = {}
+	local names = {}
+
+	local root = workspace:FindFirstChild("ActiveBrainrots")
+	if not root then return folders, names end
+
+	for _, folder in ipairs(root:GetChildren()) do
+		if folder:IsA("Folder") then
+			folders[folder.Name] = folder
+			table.insert(names, folder.Name)
+		end
+	end
+
+	return folders, names
+end
+
+local BrainrotFolders, BrainrotNames = getBrainrotData()
+
+-- ===== Helper =====
+local function isSelected(name)
+	return table.find(SelectedBrainrots, name) ~= nil
+end
+
+-- ===== Auto Farm Loop =====
+RunService.Heartbeat:Connect(function()
+	if not AutoFarmEnabled then return end
+
+	local char = lp.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	for folderName, folder in pairs(BrainrotFolders) do
+		if isSelected(folderName) then
+			for _, brainrot in ipairs(folder:GetChildren()) do
+				if brainrot:IsA("Model") then
+					local part = brainrot.PrimaryPart or brainrot:FindFirstChildWhichIsA("BasePart")
+					if part then
+						hrp.CFrame = part.CFrame
+						task.wait(0.05)
+					end
+				end
+			end
+		end
+	end
+end)
+
+
+MainTab:Toggle({
+	Title = "Auto Brainrot",
+	Desc = "Toggle auto collect",
+	Value = false,
+	Callback = function(state)
+		AutoFarmEnabled = state
+	end
+})
+
+MainTab:Dropdown({
+	Title = "Brainrot To Farm",
+	Desc = "Select brainrot categories",
+	Values = BrainrotNames,
+	Value = {},
+	Multi = true,
+	AllowNone = true,
+	Callback = function(option)
+		SelectedBrainrots = option
+	end
+})
 
 MainTab:Toggle({
     Title = "walk Speed",
