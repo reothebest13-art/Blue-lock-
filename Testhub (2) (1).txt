@@ -615,7 +615,7 @@ local BrainrotOptions = {"Legendary","Mythical","Secret","Cosmic"}
 local SelectedBrainrots = {}
 local AutoFarmEnabled = false
 
-MaimTab:Dropdown({
+MainTab:Dropdown({
 	Title = "Select Brainrot Farm",
 	Values = BrainrotOptions,
 	Multi = true,
