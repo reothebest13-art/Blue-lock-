@@ -572,6 +572,7 @@ bp.ChildAdded:Connect(setupTool)
 
 local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
+
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -579,63 +580,57 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local lp = Players.LocalPlayer
-local char = lp.Character or lp.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
+local char, hrp
+
+local function setupCharacter(c)
+	char = c
+	hrp = c:WaitForChild("HumanoidRootPart")
+end
+setupCharacter(lp.Character or lp.CharacterAdded:Wait())
+lp.CharacterAdded:Connect(setupCharacter)
 
 -- ================= CONFIG =================
 local SPEED = 330
 local TRIGGER_DISTANCE = 150
-local COOLDOWN = 1.2
-local PICKUP_DISTANCE = 12 -- กันหยิบไกล / UI โผล่ไกล
+local COOLDOWN = 1
+local PICKUP_DISTANCE = 12
 
-local FINAL_CFRAME = CFrame.new(
-	129.496, 3.180, 46.862,
-	-0.022875, 0, 0.999738,
-	0, 1, 0,
-	-0.999738, 0, -0.022875
-)
+local FINAL_CFRAME = CFrame.new(129.496,3.18,46.862)
 
 -- ================= GAPS =================
 local GAPS = {
-	CFrame.new(200, -2.82, 0),
-	CFrame.new(284, -2.82, 0),
-	CFrame.new(398, -2.82, 0),
-	CFrame.new(542, -2.82, 0),
-	CFrame.new(756, -2.82, 0),
-	CFrame.new(1080.701, -2.82, 1.350),
-	CFrame.new(1568.468, -2.82, 1.313),
-	CFrame.new(2274.280, -2.82, 3.669),
-	CFrame.new(2623.554, -2.82, -1.051)
+	CFrame.new(200,-2.82,0),
+	CFrame.new(284,-2.82,0),
+	CFrame.new(398,-2.82,0),
+	CFrame.new(542,-2.82,0),
+	CFrame.new(756,-2.82,0),
+	CFrame.new(1080.7,-2.82,1.35),
+	CFrame.new(1568.4,-2.82,1.31),
+	CFrame.new(2274.2,-2.82,3.66),
+	CFrame.new(2623.5,-2.82,-1.05)
 }
 
-
-local BrainrotOptions = {
-	"Legendary",
-	"Mythical",
-	"Secret",
-	"Cosmic",
-}
-
+-- ================= UI STATE =================
+local BrainrotOptions = {"Legendary","Mythical","Secret","Cosmic"}
 local SelectedBrainrots = {}
 local AutoFarmEnabled = false
-MainTab:Dropdown({
-	Title = "Select Brainrot Types",
-	Desc = "Choose multiple Brainrot categories",
+
+-- ================= UI =================
+Tab:Dropdown({
+	Title = "Select Brainrot",
 	Values = BrainrotOptions,
-	Value = {},
 	Multi = true,
 	AllowNone = true,
-	Callback = function(option)
-		SelectedBrainrots = option
+	Callback = function(v)
+		SelectedBrainrots = v
 	end
 })
 
-MainTab:Toggle({
+Tab:Toggle({
 	Title = "Auto Brainrot Farm",
-	Desc = "Auto collect selected Brainrots",
 	Value = false,
-	Callback = function(state)
-		AutoFarmEnabled = state
+	Callback = function(v)
+		AutoFarmEnabled = v
 	end
 })
 
@@ -645,57 +640,13 @@ local function getMaxCarry()
 end
 
 local function countRendered()
-	local folder = Workspace:FindFirstChild(lp.Name)
-	if not folder then return 0 end
+	local f = Workspace:FindFirstChild(lp.Name)
+	if not f then return 0 end
 	local c = 0
-	for _, v in ipairs(folder:GetChildren()) do
-		if v.Name == "RenderedBrainrot" then
-			c += 1
-		end
+	for _,v in ipairs(f:GetChildren()) do
+		if v.Name == "RenderedBrainrot" then c += 1 end
 	end
 	return c
-end
-
--- ================= SELECTED FOLDERS =================
-local function getSelectedBrainrotFolders()
-	local folders = {}
-
-	if #SelectedBrainrots == 0 then
-		for _, f in ipairs(Workspace.ActiveBrainrots:GetChildren()) do
-			table.insert(folders, f)
-		end
-	else
-		for _, name in ipairs(SelectedBrainrots) do
-			local folder = Workspace.ActiveBrainrots:FindFirstChild(name)
-			if folder then
-				table.insert(folders, folder)
-			end
-		end
-	end
-
-	return folders
-end
-
--- ================= NEAREST TARGET =================
-local function getNearestSelectedBrainrot()
-	local nearest, shortest = nil, math.huge
-
-	for _, folder in ipairs(getSelectedBrainrotFolders()) do
-		for _, model in ipairs(folder:GetChildren()) do
-			if model:IsA("Model") then
-				local part = model:FindFirstChildWhichIsA("BasePart")
-				if part then
-					local d = (part.Position - hrp.Position).Magnitude
-					if d < shortest then
-						shortest = d
-						nearest = part
-					end
-				end
-			end
-		end
-	end
-
-	return nearest, shortest
 end
 
 -- ================= TWEEN =================
@@ -709,99 +660,148 @@ local function stopTween()
 	end
 end
 
-local function tweenTo(cf, dist)
+local function tweenTo(cf,dist)
+	if not hrp then return end
 	stopTween()
 	currentTween = TweenService:Create(
 		hrp,
-		TweenInfo.new((dist or (hrp.Position - cf.Position).Magnitude) / SPEED, Enum.EasingStyle.Linear),
-		{ CFrame = cf }
+		TweenInfo.new((dist or (hrp.Position-cf.Position).Magnitude)/SPEED,Enum.EasingStyle.Linear),
+		{CFrame = cf}
 	)
 	currentTween:Play()
 end
 
--- ================= WAVE EVADE =================
-local function isBehindWave(wavePos, gapPos)
-	return ((hrp.Position - wavePos).Unit):Dot((gapPos - wavePos).Unit) < 0
+-- ================= BRAINROT =================
+local function getFolders()
+	local t = {}
+	if #SelectedBrainrots == 0 then
+		for _,f in ipairs(Workspace.ActiveBrainrots:GetChildren()) do
+			table.insert(t,f)
+		end
+	else
+		for _,n in ipairs(SelectedBrainrots) do
+			local f = Workspace.ActiveBrainrots:FindFirstChild(n)
+			if f then table.insert(t,f) end
+		end
+	end
+	return t
 end
 
-local function getBestGap(wavePos)
-	local best, shortest = nil, math.huge
-	for _, cf in ipairs(GAPS) do
-		if not isBehindWave(wavePos, cf.Position) then
-			local d = (hrp.Position - cf.Position).Magnitude
-			if d < shortest then
-				shortest, best = d, cf
+local function getNearestBrainrot()
+	local best,dist = nil,math.huge
+	for _,folder in ipairs(getFolders()) do
+		for _,m in ipairs(folder:GetChildren()) do
+			if m:IsA("Model") then
+				local p = m:FindFirstChildWhichIsA("BasePart")
+				if p then
+					local d = (p.Position-hrp.Position).Magnitude
+					if d < dist then
+						dist = d
+						best = p
+					end
+				end
 			end
+		end
+	end
+	return best,dist
+end
+
+-- ================= WAVE LOGIC =================
+local function getAllWaveParts()
+	local t = {}
+	if not Workspace:FindFirstChild("ActiveTsunamis") then return t end
+	for _,m in ipairs(Workspace.ActiveTsunamis:GetChildren()) do
+		for _,p in ipairs(m:GetDescendants()) do
+			if p:IsA("BasePart") then
+				table.insert(t,p)
+			end
+		end
+	end
+	return t
+end
+
+local function isNearWave(pos)
+	for _,p in ipairs(getAllWaveParts()) do
+		if (pos-p.Position).Magnitude <= TRIGGER_DISTANCE then
+			return true,p.Position
+		end
+	end
+	return false,nil
+end
+
+local function safestGap()
+	local best,score = nil,0
+	for _,cf in ipairs(GAPS) do
+		local min = math.huge
+		for _,p in ipairs(getAllWaveParts()) do
+			local d = (cf.Position-p.Position).Magnitude
+			if d < min then min = d end
+		end
+		if min > score then
+			score = min
+			best = cf
 		end
 	end
 	return best
 end
 
-local function checkWave()
-	if not Workspace:FindFirstChild("ActiveTsunamis") then return false end
-
-	for _, model in ipairs(Workspace.ActiveTsunamis:GetChildren()) do
-		for _, p in ipairs(model:GetDescendants()) do
-			if p:IsA("BasePart") then
-				if (hrp.Position - p.Position).Magnitude <= TRIGGER_DISTANCE then
-					if not busyEvade then
-						busyEvade = true
-						stopTween()
-						local cf = getBestGap(p.Position)
-						if cf then tweenTo(cf) end
-						task.delay(COOLDOWN, function()
-							busyEvade = false
-						end)
-					end
-					return true
-				end
-			end
-		end
-	end
-	return false
-end
-
--- ================= AUTO PICKUP (FIX FAR UI) =================
+-- ================= PICKUP =================
 local lastFire = {}
-
-local function tryPickup(targetPart)
-	if not targetPart then return end
-	local model = targetPart:FindFirstAncestorOfClass("Model")
-	if not model then return end
-
-	for _, prompt in ipairs(model:GetDescendants()) do
-		if prompt:IsA("ProximityPrompt") and prompt.Enabled then
-			local part = prompt.Parent
-			if part and part:IsA("BasePart") then
-				local d = (part.Position - hrp.Position).Magnitude
-				if d <= PICKUP_DISTANCE then
-					if not lastFire[prompt] or tick() - lastFire[prompt] > 0.25 then
-						lastFire[prompt] = tick()
-						pcall(function()
-							fireproximityprompt(prompt)
-						end)
-					end
+local function tryPickup(part)
+	local m = part and part:FindFirstAncestorOfClass("Model")
+	if not m then return end
+	for _,pr in ipairs(m:GetDescendants()) do
+		if pr:IsA("ProximityPrompt") then
+			local d = (pr.Parent.Position-hrp.Position).Magnitude
+			if d <= PICKUP_DISTANCE then
+				if not lastFire[pr] or tick()-lastFire[pr] > 0.25 then
+					lastFire[pr] = tick()
+					pcall(function()
+						fireproximityprompt(pr)
+					end)
 				end
 			end
 		end
 	end
 end
+
+-- ================= RESET AFTER DIE =================
+lp.CharacterAdded:Connect(function()
+	busyEvade = false
+	stopTween()
+end)
 
 -- ================= MAIN LOOP =================
 RunService.Heartbeat:Connect(function()
-	if not AutoFarmEnabled then return end
+	if not AutoFarmEnabled or not hrp then return end
 
-	if checkWave() then return end
+	local nearWave,wavePos = isNearWave(hrp.Position)
+	if nearWave and not busyEvade then
+		busyEvade = true
+		stopTween()
+		local cf = safestGap()
+		if cf then tweenTo(cf) end
+		task.delay(COOLDOWN,function()
+			busyEvade = false
+		end)
+		return
+	end
 
-	if getMaxCarry() > 0 and countRendered() >= getMaxCarry() then
+	if getMaxCarry()>0 and countRendered()>=getMaxCarry() then
 		tweenTo(FINAL_CFRAME)
 		return
 	end
 
-	local target, dist = getNearestSelectedBrainrot()
-	if target and not busyEvade then
-		tweenTo(target.CFrame, dist)
-		tryPickup(target)
+	local target,dist = getNearestBrainrot()
+	if target then
+		local danger = isNearWave(target.Position)
+		if danger then
+			local cf = safestGap()
+			if cf then tweenTo(cf) end
+		else
+			tweenTo(target.CFrame,dist)
+			tryPickup(target)
+		end
 	end
 end)
 
