@@ -574,7 +574,6 @@ local MainTab = Window:Tab({Title = "Main", Icon = "user"})
 
 
 
-
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -638,29 +637,40 @@ local function countRendered()
 	return c
 end
 
--- ================= TWEEN =================
+-- ================= TWEEN CONTROL =================
 local currentTween
+local isMoving = false
 local busyEvade = false
+local currentTarget
 
 local function stopTween()
 	if currentTween then
 		currentTween:Cancel()
 		currentTween = nil
 	end
+	isMoving = false
 end
 
 local function tweenTo(cf, dist)
-	if not hrp then return end
+	if not hrp or isMoving then return end
+
+	isMoving = true
 	stopTween()
+
 	currentTween = TweenService:Create(
 		hrp,
 		TweenInfo.new((dist or (hrp.Position - cf.Position).Magnitude) / SPEED, Enum.EasingStyle.Linear),
 		{ CFrame = cf }
 	)
+
+	currentTween.Completed:Once(function()
+		isMoving = false
+	end)
+
 	currentTween:Play()
 end
 
--- ================= WAVE =================
+-- ================= WAVE LOGIC =================
 local function isBehindWave(wavePos, targetPos)
 	return ((hrp.Position - wavePos).Unit):Dot((targetPos - wavePos).Unit) < 0
 end
@@ -692,19 +702,17 @@ end
 local function checkWave()
 	for _, wave in ipairs(Workspace.ActiveTsunamis:GetChildren()) do
 		for _, p in ipairs(wave:GetDescendants()) do
-			if p:IsA("BasePart") then
-				if (hrp.Position - p.Position).Magnitude <= TRIGGER_DISTANCE then
-					if not busyEvade then
-						busyEvade = true
-						stopTween()
-						local gap = getBestGap(p.Position)
-						if gap then tweenTo(gap) end
-						task.delay(COOLDOWN, function()
-							busyEvade = false
-						end)
-					end
-					return true
+			if p:IsA("BasePart") and (hrp.Position - p.Position).Magnitude <= TRIGGER_DISTANCE then
+				if not busyEvade then
+					busyEvade = true
+					stopTween()
+					local gap = getBestGap(p.Position)
+					if gap then tweenTo(gap) end
+					task.delay(COOLDOWN, function()
+						busyEvade = false
+					end)
 				end
+				return true
 			end
 		end
 	end
@@ -764,24 +772,35 @@ end
 RunService.Heartbeat:Connect(function()
 	if not AutoFarmEnabled or not hrp then return end
 
+	-- คลื่นมาก่อนเสมอ
 	if checkWave() then return end
 
+	-- หยิบของ
 	autoPickup()
 
+	-- เต็ม → ไปจุดสุดท้าย
 	if countRendered() >= getMaxCarry() then
-		tweenTo(FINAL_CFRAME)
+		if not isMoving then
+			currentTarget = "FINAL"
+			tweenTo(FINAL_CFRAME)
+		end
 		return
 	end
 
+	-- กำลังวิ่งอยู่ ไม่สั่งซ้ำ
+	if isMoving then return end
+
+	-- หาเป้าหมายใหม่
 	local target, dist = getNearestSafeBrainrot()
-	if target and not busyEvade then
+	if target and target ~= currentTarget then
+		currentTarget = target
 		tweenTo(target.CFrame, dist)
 	end
 end)
 
 -- ================= UI =================
 MainTab:Dropdown({
-	Title = "Select Brainrot Types",
+	Title = "Select Brainrot Types..",
 	Values = BrainrotOptions,
 	Multi = true,
 	Default = {},
