@@ -185,9 +185,10 @@ local AutoCollectEnabled = false
 local HitLongEnabled = false
 local ShowRangeEnabled = false
 local HitRangeValue = 50
-local ORIGINAL_SIZES = {}
 local Connections = {}
+local ORIGINAL_SIZES = {}
 local char, hrp
+
 
 
 
@@ -523,10 +524,11 @@ end
 -- CombatTab
 -- ----------
 
-local lp = Players.LocalPlayer
-local bp = lp:WaitForChild("Backpack")
 
--- ====== VISUAL ======
+local lp = Players.LocalPlayer
+
+
+-- ===== VISUAL =====
 local function createBoxVisual(parent, size)
     local box = Instance.new("Part")
     box.Name = "BoxVisual"
@@ -548,8 +550,9 @@ local function createBoxVisual(parent, size)
     return box
 end
 
--- ====== APPLY HITBOX ======
+-- ===== APPLY HITBOX =====
 local function applyHitbox(tool)
+    if not tool or not tool:IsA("Tool") then return end
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
 
@@ -559,15 +562,14 @@ local function applyHitbox(tool)
 
     if HitLongEnabled then
         hitbox.Size = Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
-        tool.ToolTip = ("📦 Hit Range\nSize: %d×%d×%d")
-            :format(HitRangeValue, HitRangeValue, HitRangeValue)
     else
         hitbox.Size = ORIGINAL_SIZES[hitbox]
     end
 end
 
--- ====== APPLY VISUAL ======
+-- ===== APPLY VISUAL =====
 local function applyVisual(tool)
+    if not tool or not tool:IsA("Tool") then return end
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
 
@@ -578,7 +580,6 @@ local function applyVisual(tool)
 
     local old = tool:FindFirstChild("BoxVisual")
     if old then old:Destroy() end
-
     if not ShowRangeEnabled then return end
 
     local box = createBoxVisual(
@@ -593,7 +594,7 @@ local function applyVisual(tool)
     end)
 end
 
--- ====== TOOL SETUP ======
+-- ===== TOOL SETUP =====
 local function setupTool(tool)
     if not tool:IsA("Tool") then return end
     if not tool:FindFirstChild("Hitbox") then return end
@@ -614,11 +615,39 @@ local function setupTool(tool)
     end)
 end
 
--- ====== INIT ======
-for _, tool in ipairs(bp:GetChildren()) do
-    setupTool(tool)
+-- ===== INIT BACKPACK =====
+local function initBackpack()
+    local bp = lp:WaitForChild("Backpack")
+
+    for _, tool in ipairs(bp:GetChildren()) do
+        setupTool(tool)
+        applyHitbox(tool)
+        applyVisual(tool)
+    end
+
+    bp.ChildAdded:Connect(function(tool)
+        task.wait()
+        setupTool(tool)
+        applyHitbox(tool)
+        applyVisual(tool)
+    end)
 end
-bp.ChildAdded:Connect(setupTool)
+
+-- ===== RESPAWN FIX (สำคัญ) =====
+lp.CharacterAdded:Connect(function()
+    task.wait(1)
+
+    for _, conn in pairs(Connections) do
+        if conn then conn:Disconnect() end
+    end
+    table.clear(Connections)
+    table.clear(ORIGINAL_SIZES)
+
+    initBackpack()
+end)
+
+-- ===== FIRST INIT =====
+initBackpack()
 
 
 
@@ -899,6 +928,8 @@ CombatTab:Toggle({
     Value = false,
     Callback = function(state)
         HitLongEnabled = state
+        local bp = lp:FindFirstChild("Backpack")
+        if not bp then return end
         for _, tool in ipairs(bp:GetChildren()) do
             applyHitbox(tool)
         end
@@ -911,6 +942,8 @@ CombatTab:Toggle({
     Value = false,
     Callback = function(state)
         ShowRangeEnabled = state
+        local bp = lp:FindFirstChild("Backpack")
+        if not bp then return end
         for _, tool in ipairs(bp:GetChildren()) do
             applyVisual(tool)
         end
@@ -924,21 +957,23 @@ CombatTab:Slider({
     Step = 1,
     Callback = function(value)
         HitRangeValue = value
+        local bp = lp:FindFirstChild("Backpack")
+        if not bp then return end
 
         for _, tool in ipairs(bp:GetChildren()) do
             if HitLongEnabled then
                 applyHitbox(tool)
             end
 
-            if ShowRangeEnabled then
-                local box = tool:FindFirstChild("BoxVisual")
-                if box then
-                    box.Size = Vector3.new(value, value, value)
-                end
+            local box = tool:FindFirstChild("BoxVisual")
+            if box then
+                box.Size = Vector3.new(value, value, value)
             end
         end
     end
 })
+
+
 
 
 
