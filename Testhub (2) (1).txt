@@ -903,17 +903,10 @@ end)
 local WaveTab = Window:Tab({Title = "Wave", Icon = "user"})
 
 
-WaveTab:Toggle({
-	Title = "Auto dodge Wave🌊",
-	Desc = "หนีคลื่นอัตโนมัติ",
-	Default = false,
-	Callback = function(state)
-		Enabled = state
-	end
-})
+
 
 WaveTab:Button({
-    Title = "Tween Gap",
+    Title = "Tween Gap UI",
     Desc = "กดแล้วจะมีหน้าต่างสคริปเสริมขึ้นมา",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/reothebest13-art/ERROR-HUB/refs/heads/main/Gaptween"))()
