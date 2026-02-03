@@ -562,7 +562,7 @@ local function applyVisual(tool)
 
     local box = createBoxVisual(
         tool,
-        Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
+        Vector3.new(📦 HitRangeValue, HitRangeValue, HitRangeValue)
     )
 
     Connections[tool] = RunService.Heartbeat:Connect(function()
@@ -904,12 +904,11 @@ Title = "Sell Brainrot"
 local lp = Players.LocalPlayer
 local SellRemote =
     ReplicatedStorage
-    :WaitForChild("RemoteFunctions")
-    :WaitForChild("SellTool")
+        :WaitForChild("RemoteFunctions")
+        :WaitForChild("SellTool")
 
 -- ================== CONFIG ==================
 local delay_sell = 0.03
--- ================== DATA ==================
 local Checked = {}
 local ClassData = {}
 local queue = {}
@@ -956,7 +955,6 @@ local function getClassFromTool(tool)
     return nil
 end
 
--- ================== SCAN ==================
 local function scanTool(tool)
     if scanning then return end
     if not tool:IsA("Tool") then return end
@@ -1027,11 +1025,31 @@ local function scanThenSell()
     task.wait(delay_sell * 2)
     sellSelectedClasses()
 end
+local function connectBackpackWatcher()
+    if backpackConn then
+        backpackConn:Disconnect()
+    end
+
+    local backpack = lp:WaitForChild("Backpack")
+    backpackConn = backpack.ChildAdded:Connect(function(tool)
+        if not sellToggleOn then return end
+        if not tool:IsA("Tool") then return end
+
+        task.wait(0.15)
+        scanTool(tool)
+
+        local class = ClassData[tool]
+        if class and selectedClasses[class] then
+            table.insert(queue, tool)
+            processQueue()
+        end
+    end)
+end
 
 
 FarmTab:Dropdown({
-    Title = "Select Rarity Brainrot",
-    Desc = "เลือกระดับความหายากที่ต้องการจะขาย",
+    Title = "Select Rarity Brainrot.",
+    Desc = "เลือกระดับความหายากที่จะขาย",
     Values = {
         "Common","Uncommon","Rare","Epic",
         "Legendary","Mythical","Cosmic",
@@ -1044,22 +1062,33 @@ FarmTab:Dropdown({
         for _, c in ipairs(selected) do
             selectedClasses[c] = true
         end
+        if sellToggleOn then
+            scanThenSell()
+        end
     end
 })
 
 FarmTab:Toggle({
-    Title = "Auto Sell Brinrot",
+    Title = "Auto Sell Brainrot",
     Desc = "ออโต้ขายสมองเน่า",
     Default = false,
     Callback = function(state)
         sellToggleOn = state
+
         if state then
             scanThenSell()
+            connectBackpackWatcher()
+        else
+            if backpackConn then
+                backpackConn:Disconnect()
+                backpackConn = nil
+            end
         end
     end
 })
 lp.CharacterAdded:Connect(function()
     task.wait(0.6)
+
     Checked = {}
     ClassData = {}
     queue = {}
@@ -1068,8 +1097,10 @@ lp.CharacterAdded:Connect(function()
 
     if sellToggleOn then
         scanThenSell()
+        connectBackpackWatcher()
     end
 end)
+
 
 
 
