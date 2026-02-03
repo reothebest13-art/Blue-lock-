@@ -39,7 +39,7 @@ local DARK_TAB_GRADIENT = WindUI:Gradient({
 -- THEME
 -- ===============================
 WindUI:AddTheme({
-    Name = "Senixa Theme",
+    Name = "rickhub Theme",
 
     Accent = NEON_GRADIENT,
     Background = BACKGROUND_GRADIENT,
@@ -92,10 +92,11 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
 
+
 local Window = WindUI:CreateWindow({
     Title = "Rick HUB",
     Icon = "rbxassetid://108958018844079",
-    Theme = "Senixa Theme",
+    Theme = "rickhub Theme",
     Transparent = true,
     Resizable = true,
     Size = UDim2.fromOffset(850, 400), 
@@ -428,7 +429,7 @@ end)
 
 
 -- ======
--- Godmode
+-- Godmode ปลอมรรรรกราำ่ำาำา
 -- =====
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -461,8 +462,6 @@ local function AntiWaveInfinite(char)
     hum.WalkSpeed = 16
     hum.JumpPower = 50
     hum.UseJumpPower = true
-
-    -- กันตายจากเวฟ
     table.insert(Connections,
         hum:GetPropertyChangedSignal("Health"):Connect(function()
             if not AntiWaveEnabled then return end
@@ -528,7 +527,6 @@ local function createBoxVisual(parent, size)
     return box
 end
 
--- ====== APPLY HITBOX ======
 local function applyHitbox(tool)
     local hitbox = tool:FindFirstChild("Hitbox")
     if not hitbox then return end
@@ -539,7 +537,7 @@ local function applyHitbox(tool)
 
     if HitLongEnabled then
         hitbox.Size = Vector3.new(HitRangeValue, HitRangeValue, HitRangeValue)
-        tool.ToolTip = ("📦 Hit Range\nSize: %d×%d×%d")
+        tool.ToolTip = (" Hit Range\nSize: %d×%d×%d")
             :format(HitRangeValue, HitRangeValue, HitRangeValue)
     else
         hitbox.Size = ORIGINAL_SIZES[hitbox]
@@ -730,20 +728,11 @@ MainTab:Toggle({
 })
 
 
--- ===== Services =====
-local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
 local Net = require(ReplicatedStorage.Packages.Net)
 local PlotAction = Net:RemoteFunction("Plot.PlotAction")
-
 local lp = Players.LocalPlayer
-
--- ===== STATE =====
 local AutoUpgrade = false
 local SelectedBrainrot = nil
 
@@ -787,7 +776,7 @@ local BrainrotDropdown = MainTab:Dropdown({
 	end
 })
 
--- ===== TOGGLE AUTO UPGRADE =====
+
 MainTab:Toggle({
 	Title = "Auto Upgrade",
 	Callback = function(state)
@@ -796,7 +785,7 @@ MainTab:Toggle({
 	end
 })
 
--- ===== REAL-TIME DROPDOWN UPDATE =====
+
 local lastHash = ""
 
 RunService.Heartbeat:Connect(function()
@@ -809,13 +798,12 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ===== AUTO UPGRADE LOOP =====
+
 task.spawn(function()
 	while task.wait(2) do
 		if not AutoUpgrade then continue end
 		if not SelectedBrainrot then continue end
 
-		-- แยก slot จากข้อความ Dropdown
 		local slot = SelectedBrainrot:match("Slot%s+(%d+)")
 		if not slot then continue end
 
