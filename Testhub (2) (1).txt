@@ -93,6 +93,7 @@ local Workspace = game:GetService("Workspace")
 
 
 
+
 local Window = WindUI:CreateWindow({
     Title = "Rick HUB",
     Icon = "rbxassetid://108958018844079",
@@ -887,6 +888,189 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+
+
+FarmTab:Divider()
+
+
+FarmTab:Section({
+Title = "Sell Brainrot"
+})
+
+
+
+
+
+local lp = Players.LocalPlayer
+local SellRemote =
+    ReplicatedStorage
+    :WaitForChild("RemoteFunctions")
+    :WaitForChild("SellTool")
+
+-- ================== CONFIG ==================
+local delay_sell = 0.03
+-- ================== DATA ==================
+local Checked = {}
+local ClassData = {}
+local queue = {}
+
+local scanning = false
+local selling = false
+local backpackConn
+
+local sellToggleOn = false
+local selectedClasses = {}
+
+-- ================== UTILS ==================
+local function getCharacter()
+    return lp.Character or lp.CharacterAdded:Wait()
+end
+
+local function hasToolTipText(tool)
+    local ok, tip = pcall(function()
+        return tool.ToolTip
+    end)
+    return ok and type(tip) == "string" and tip ~= ""
+end
+
+local function shouldSkip(tool)
+    if hasToolTipText(tool) then return true end
+    if tool:FindFirstChild("Hitbox") then return true end
+    return false
+end
+
+local function getClassFromTool(tool)
+    local rm = tool:FindFirstChild("RenderModel")
+    if not rm then return nil end
+
+    for _, model in ipairs(rm:GetChildren()) do
+        local me = model:FindFirstChild("ModelExtents")
+        local stats = me and me:FindFirstChild("StatsGui")
+        local frame = stats and stats:FindFirstChild("Frame")
+        local class = frame and frame:FindFirstChild("Class")
+
+        if class and class:IsA("TextLabel") then
+            return class.Text
+        end
+    end
+    return nil
+end
+
+-- ================== SCAN ==================
+local function scanTool(tool)
+    if scanning then return end
+    if not tool:IsA("Tool") then return end
+    if Checked[tool] then return end
+    Checked[tool] = true
+
+    if shouldSkip(tool) then return end
+
+    scanning = true
+    local char = getCharacter()
+
+    tool.Parent = char
+    task.wait(delay_sell)
+
+    local class = getClassFromTool(tool)
+    if class then
+        ClassData[tool] = class
+        print("[SCAN]", tool.Name, class)
+    end
+
+    if tool.Parent == char then
+        tool.Parent = lp.Backpack
+    end
+
+    scanning = false
+end
+
+local function scanAll()
+    Checked = {}
+    ClassData = {}
+
+    local backpack = lp:WaitForChild("Backpack")
+    for _, tool in ipairs(backpack:GetChildren()) do
+        scanTool(tool)
+        task.wait(delay_sell)
+    end
+end
+
+-- ================== SELL ==================
+local function processQueue()
+    if selling then return end
+    selling = true
+
+    while #queue > 0 do
+        local tool = table.remove(queue, 1)
+        if tool and tool.Parent == lp.Backpack then
+            tool.Parent = getCharacter()
+            task.wait(delay_sell)
+            SellRemote:InvokeServer()
+            task.wait(delay_sell)
+        end
+    end
+
+    selling = false
+end
+
+local function sellSelectedClasses()
+    for tool, class in pairs(ClassData) do
+        if selectedClasses[class] and tool.Parent == lp.Backpack then
+            table.insert(queue, tool)
+        end
+    end
+    processQueue()
+end
+
+local function scanThenSell()
+    if scanning or selling then return end
+    scanAll()
+    task.wait(delay_sell * 2)
+    sellSelectedClasses()
+end
+
+
+FarmTab:Dropdown({
+    Title = "Select Rarity Brainrot",
+    Desc = "เลือกระดับความหายากที่ต้องการจะขาย",
+    Values = {
+        "Common","Uncommon","Rare","Epic",
+        "Legendary","Mythical","Cosmic",
+        "Secret","Celestial","Divine"
+    },
+    Multi = true,
+    AllowNone = true,
+    Callback = function(selected)
+        selectedClasses = {}
+        for _, c in ipairs(selected) do
+            selectedClasses[c] = true
+        end
+    end
+})
+
+FramTab:Toggle({
+    Title = "Auto Sell Brinrot",
+    Desc = "ออโต้ขายสมองเน่า",
+    Default = false,
+    Callback = function(state)
+        sellToggleOn = state
+        if state then
+            scanThenSell()
+        end
+    end
+})
+lp.CharacterAdded:Connect(function()
+    task.wait(0.6)
+    Checked = {}
+    ClassData = {}
+    queue = {}
+    scanning = false
+    selling = false
+
+    if sellToggleOn then
+        scanThenSell()
+    end
+end)
 
 
 
