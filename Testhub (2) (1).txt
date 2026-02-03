@@ -974,7 +974,6 @@ local function scanTool(tool)
     local class = getClassFromTool(tool)
     if class then
         ClassData[tool] = class
-        print("[SCAN]", tool.Name, class)
     end
 
     if tool.Parent == char then
