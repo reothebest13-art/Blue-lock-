@@ -250,12 +250,15 @@ end
 local function countRendered()
 	local folder = Workspace:FindFirstChild(lp.Name)
 	if not folder then return 0 end
+
 	local c = 0
 	for _, v in ipairs(folder:GetChildren()) do
-		if v.Name == "RenderedBrainrot" then
+		if v.Name == "RenderedBrainrot"
+		or v.Name:sub(1, 18) == "NaturalLuckyBlock_" then
 			c += 1
 		end
 	end
+
 	return c
 end
 
