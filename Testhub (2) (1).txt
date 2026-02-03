@@ -1048,7 +1048,7 @@ FarmTab:Dropdown({
     end
 })
 
-FramTab:Toggle({
+FarmTab:Toggle({
     Title = "Auto Sell Brinrot",
     Desc = "ออโต้ขายสมองเน่า",
     Default = false,
