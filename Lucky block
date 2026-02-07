@@ -85,7 +85,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
-
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 
 local Window = WindUI:CreateWindow({
@@ -163,3 +163,74 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
+
+
+
+----------------
+
+-- Autofarm
+-----------------
+
+
+local AutoFarm = false
+local HIT_SPEED = 0.3
+
+
+local player = Players.LocalPlayer
+local DamageBlockEvent = ReplicatedStorage.Remotes:WaitForChild("DamageBlockEvent")
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+
+        if not AutoFarm then 
+            continue 
+        end
+
+        local folder = workspace:FindFirstChild("LuckyBlocks")
+        if not folder then continue end
+
+        local char = player.Character
+        if not char then continue end
+
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+
+        for _, block in pairs(folder:GetChildren()) do
+            if not AutoFarm then break end
+            if not block or not block.Parent then continue end
+
+            local part = block:FindFirstChild("Hitbox") 
+                or block.PrimaryPart 
+                or block:FindFirstChildWhichIsA("BasePart")
+            if not part then continue end
+
+            local underPos = part.Position - Vector3.new(0, part.Size.Y/2 + 0.01, 0)
+
+            -- TP ใต้บล็อก + หันหาบล็อก
+            hrp.CFrame = CFrame.lookAt(underPos, part.Position)
+            task.wait(0.1)
+
+            -- ตี
+            while AutoFarm and block and block.Parent do
+                DamageBlockEvent:FireServer(block)
+                hrp.CFrame = CFrame.lookAt(hrp.Position, part.Position)
+                task.wait(HIT_SPEED)
+            end
+        end
+    end
+end)
+
+
+
+local MainTab = Window:Tab({Title = "MAIN", Icon = "user"})
+
+
+MainTab:Toggle({
+    Title = "AutoFarm",
+    Desc = "ออโต้ฟาม",
+    Default = false,
+    Callback = function(state)
+        AutoFarm = state
+    end
+})
