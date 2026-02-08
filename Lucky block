@@ -171,21 +171,43 @@ end)
 -- Autofarm
 -----------------
 
-
 local AutoFarm = false
+local SelectedBlock = nil
 local HIT_SPEED = 0.3
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local DamageBlockEvent = ReplicatedStorage.Remotes:WaitForChild("DamageBlockEvent")
 
+--// ===== GET UNIQUE BLOCK =====
+local function getBlocks()
+    local folder = workspace:FindFirstChild("LuckyBlocks")
+    local unique = {}
+    local list = {}
+
+    if folder then
+        for _,v in pairs(folder:GetChildren()) do
+            local name = v.Name
+            if not unique[name] then
+                unique[name] = true
+                table.insert(list, name)
+            end
+        end
+    end
+
+    table.sort(list)
+    return list
+end
+
+--// ===== AUTO FARM =====
 task.spawn(function()
     while true do
         task.wait(0.1)
 
-        if not AutoFarm then 
-            continue 
-        end
+        if not AutoFarm then continue end
+        if not SelectedBlock then continue end
 
         local folder = workspace:FindFirstChild("LuckyBlocks")
         if not folder then continue end
@@ -196,9 +218,10 @@ task.spawn(function()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then continue end
 
-        for _, block in pairs(folder:GetChildren()) do
+        for _,block in pairs(folder:GetChildren()) do
             if not AutoFarm then break end
-            if not block or not block.Parent then continue end
+            if block.Name ~= SelectedBlock then continue end
+            if not block.Parent then continue end
 
             local part = block:FindFirstChild("Hitbox") 
                 or block.PrimaryPart 
@@ -206,13 +229,11 @@ task.spawn(function()
             if not part then continue end
 
             local underPos = part.Position - Vector3.new(0, part.Size.Y/2 + 0.01, 0)
-
-            -- TP ใต้บล็อก + หันหาบล็อก
             hrp.CFrame = CFrame.lookAt(underPos, part.Position)
+
             task.wait(0.1)
 
-            -- ตี
-            while AutoFarm and block and block.Parent do
+            while AutoFarm and block and block.Parent and SelectedBlock == block.Name do
                 DamageBlockEvent:FireServer(block)
                 hrp.CFrame = CFrame.lookAt(hrp.Position, part.Position)
                 task.wait(HIT_SPEED)
@@ -225,6 +246,30 @@ end)
 
 local MainTab = Window:Tab({Title = "MAIN", Icon = "user"})
 
+local Drop = MainTab:Dropdown({
+    Title = "SelectedBlock Farm",
+    Desc = "เลือกบล็อกที่จะฟาม",
+    Values = getBlocks(),
+    Multi = false,
+    Default = nil,
+    Callback = function(val)
+        SelectedBlock = val
+    end
+})
+task.spawn(function()
+    local lastString = ""
+    while true do
+        task.wait(1)
+
+        local newList = getBlocks()
+        local newString = table.concat(newList,"|")
+
+        if newString ~= lastString then
+            lastString = newString
+            Drop:Set(newList)
+        end
+    end
+end)
 
 MainTab:Toggle({
     Title = "AutoFarm",
