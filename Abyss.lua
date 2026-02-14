@@ -77,7 +77,7 @@ local avatar = "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="
 
 local Window = WindUI:CreateWindow({
     Title = "RICK HUB [ Abyss Beta ]",
-    Icon = "rbxassetid://",
+    Icon = "rbxassetid://108958018844079",
     Author = "Author[ 009.exe ]",
     Folder = "RICK HUB",
     Size = UDim2.fromOffset(730, 410),
@@ -94,6 +94,66 @@ local Window = WindUI:CreateWindow({
         }
     }
 })
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleBtn = Instance.new("ImageButton")
+
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://108958018844079"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
+
+local opened = true
+
+local function toggle()
+    opened = not opened
+    if Window.UI then
+        Window.UI.Enabled = opened
+    else
+        Window:Toggle()
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ToggleBtn:TweenSize(
+        UDim2.new(0, 56, 0, 56),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.12,
+        true,
+        function()
+            ToggleBtn:TweenSize(
+                UDim2.new(0, 50, 0, 50),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.12,
+                true
+            )
+        end
+    )
+    toggle()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.T then
+        toggle()
+    end
+end)
+
 
 
 local MainTab   = Window:Tab({Title="Main",   Icon="home"})
