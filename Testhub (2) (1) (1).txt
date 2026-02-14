@@ -953,7 +953,52 @@ ESPTab:Section({
 local CombatTab = Window:Tab({Title = "Combat", Icon = "swords"})
 
 
+CombatTab:Toggle({
+    Title = "Hit Long",
+    Desc = "ตีไกล",
+    Value = false,
+    Callback = function(state)
+        HitLongEnabled = state
+        for _, tool in ipairs(bp:GetChildren()) do
+            applyHitbox(tool)
+        end
+    end
+})
 
+CombatTab:Toggle({
+    Title = "Show hit range",
+    Desc = "โชว์ระยะการตี",
+    Value = false,
+    Callback = function(state)
+        ShowRangeEnabled = state
+        for _, tool in ipairs(bp:GetChildren()) do
+            applyVisual(tool)
+        end
+    end
+})
+
+CombatTab:Slider({
+    Title = "hit range Value",
+    Desc = "ปรับระยะการตี",
+    Value = { Min = 10, Max = 200, Default = 50 },
+    Step = 1,
+    Callback = function(value)
+        HitRangeValue = value
+
+        for _, tool in ipairs(bp:GetChildren()) do
+            if HitLongEnabled then
+                applyHitbox(tool)
+            end
+
+            if ShowRangeEnabled then
+                local box = tool:FindFirstChild("BoxVisual")
+                if box then
+                    box.Size = Vector3.new(value, value, value)
+                end
+            end
+        end
+    end
+})
 
 
 
