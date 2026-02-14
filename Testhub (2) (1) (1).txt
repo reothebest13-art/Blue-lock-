@@ -729,12 +729,10 @@ MainTab:Toggle({
 })
 
 
--- ===== Services =====
-local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
+
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 
 local ClientGlobals = require(ReplicatedStorage.Client.Modules.ClientGlobals)
 local Net = require(ReplicatedStorage.Packages.Net)
