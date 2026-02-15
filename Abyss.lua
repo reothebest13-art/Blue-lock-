@@ -278,7 +278,6 @@ local function createESP(fish)
         y = y + 0.3
     end
 
-    -- ระยะ
     if ShowInfo.Distance then
         local distLabel = Instance.new("TextLabel")
         distLabel.Size = UDim2.new(1,0,0.3,0)
